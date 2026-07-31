@@ -16,8 +16,15 @@
 # .dev.vars, which is gitignored. See README.
 
 name = "the-mess-junk"
-compatibility_date = "2026-07-30"
 pages_build_output_dir = "dist"
+
+# Pinned to a date the locally-installed Wrangler's bundled runtime supports.
+# Cloudflare's production runtime accepts any date up to today, so a later date
+# is valid there — but pinning ahead of the local runtime makes
+# `wrangler pages dev` warn and silently fall back, which is confusing when
+# testing Functions. Bump this (and Wrangler) together when you need a newer
+# runtime feature; nothing in the current Functions requires one.
+compatibility_date = "2025-03-10"
 
 # `nodejs_compat` is not required by the current Functions — they use only
 # fetch and the Web Crypto/Streams APIs already present in the Workers runtime.

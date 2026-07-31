@@ -16,20 +16,20 @@ import Blob from './motifs/Blob.astro';
 import { nav, site, whatsappLink } from '../data/site';
 ---
 
-<footer class="relative overflow-hidden bg-ink text-white/80">
+<footer class="relative overflow-hidden bg-ink text-white">
   <Blob variant={3} color="var(--cobalt)" opacity={0.28} class="absolute -left-[14%] -top-[40%] w-[52%]" />
   <Blob variant={1} color="var(--pink)" opacity={0.12} class="absolute -bottom-[46%] -right-[10%] w-[44%]" />
   <Grain opacity={0.22} />
 
   <div class="shell relative z-[2]">
     <!-- Newsletter — questionnaire §9 "Newsletter / email signup" -->
-    <div class="border-b border-white/10 py-12 md:py-14">
+    <div class="border-b border-white/20 py-12 md:py-14">
       <div class="grid gap-8 md:grid-cols-[1.1fr_1fr] md:items-center md:gap-12">
         <div>
           <h2 class="font-display text-display-md text-white">
             Know when the next one drops
           </h2>
-          <p class="mt-2 max-w-prose text-body-md text-white/70">
+          <p class="mt-2 max-w-prose text-body-md text-white/85">
             New workshop dates, seasonal sessions and the occasional pop-up.
             One email a month at most — we are running a studio, not a mailing list.
           </p>
@@ -48,7 +48,7 @@ import { nav, site, whatsappLink } from '../data/site';
             required
             autocomplete="email"
             placeholder="you@example.com"
-            class="field !border-white/20 !bg-white/5 !text-white placeholder:!text-white/45 sm:flex-1"
+            class="field !border-white/30 !bg-white/10 !text-white placeholder:!text-white/60 sm:flex-1"
           />
           <button type="submit" class="btn btn-primary shrink-0">
             Sign me up
@@ -59,7 +59,7 @@ import { nav, site, whatsappLink } from '../data/site';
         id="newsletter-status"
         role="status"
         aria-live="polite"
-        class="mt-3 text-body-sm text-white/70 empty:mt-0"
+        class="mt-3 text-body-sm text-white/85 empty:mt-0"
       >
       </p>
     </div>
@@ -68,10 +68,10 @@ import { nav, site, whatsappLink } from '../data/site';
     <div class="grid gap-10 py-12 md:grid-cols-2 md:py-16 lg:grid-cols-[1.4fr_1fr_1.2fr]">
       <div>
         <Logo tone="dark" class="text-[1.5rem]" />
-        <p class="mt-4 max-w-xs font-scribble text-scribble text-white/70">
+        <p class="mt-4 max-w-xs font-scribble text-scribble text-white">
           {site.tagline}
         </p>
-        <p class="mt-4 max-w-xs text-body-sm leading-relaxed text-white/60">
+        <p class="mt-4 max-w-xs text-body-sm leading-relaxed text-white/85">
           {site.description}
         </p>
 
@@ -80,7 +80,7 @@ import { nav, site, whatsappLink } from '../data/site';
             href={site.social.instagram}
             target="_blank"
             rel="noopener"
-            class="inline-flex h-11 w-11 items-center justify-center rounded-pill border border-white/20 text-white transition-colors duration-200 ease-brand hover:border-pink hover:bg-pink hover:text-ink"
+            class="inline-flex h-11 w-11 items-center justify-center rounded-pill border border-white/35 text-white transition-colors duration-200 ease-brand hover:border-pink hover:bg-pink hover:text-ink"
           >
             <Icon name="instagram" size={19} label="The Mess Junk on Instagram" />
           </a>
@@ -88,7 +88,7 @@ import { nav, site, whatsappLink } from '../data/site';
             href={whatsappLink()}
             target="_blank"
             rel="noopener"
-            class="inline-flex h-11 w-11 items-center justify-center rounded-pill border border-white/20 text-white transition-colors duration-200 ease-brand hover:border-pink hover:bg-pink hover:text-ink"
+            class="inline-flex h-11 w-11 items-center justify-center rounded-pill border border-white/35 text-white transition-colors duration-200 ease-brand hover:border-pink hover:bg-pink hover:text-ink"
           >
             <Icon name="whatsapp" size={19} label="Chat with us on WhatsApp" />
           </a>
@@ -96,14 +96,14 @@ import { nav, site, whatsappLink } from '../data/site';
       </div>
 
       <nav aria-label="Footer">
-        <h2 class="eyebrow !text-white/50">Explore</h2>
+        <h2 class="eyebrow !text-white/75">Explore</h2>
         <ul class="mt-4 space-y-2.5">
           {
             nav.map((item) => (
               <li>
                 <a
                   href={item.href}
-                  class="text-body-sm text-white/75 transition-colors duration-200 ease-brand hover:text-pink"
+                  class="text-body-sm text-white transition-colors duration-200 ease-brand hover:text-pink"
                 >
                   {item.label}
                 </a>
@@ -114,15 +114,15 @@ import { nav, site, whatsappLink } from '../data/site';
       </nav>
 
       <div>
-        <h2 class="eyebrow !text-white/50">Get in touch</h2>
+        <h2 class="eyebrow !text-white/75">Get in touch</h2>
         <ul class="mt-4 space-y-3.5 text-body-sm">
           <li class="flex gap-3">
             <Icon name="map-pin" size={18} class="mt-0.5 text-pink" />
-            <span class="text-white/75">{site.addressLine}</span>
+            <span class="text-white">{site.addressLine}</span>
           </li>
           <li class="flex gap-3">
             <Icon name="phone" size={18} class="mt-0.5 text-pink" />
-            <span class="flex flex-wrap gap-x-2 text-white/75">
+            <span class="flex flex-wrap gap-x-2 text-white">
               <a href={`tel:+91${site.primaryPhone}`} class="hover:text-pink">
                 +91 {site.primaryPhone}
               </a>
@@ -137,13 +137,13 @@ import { nav, site, whatsappLink } from '../data/site';
           </li>
           <li class="flex gap-3">
             <Icon name="mail" size={18} class="mt-0.5 text-pink" />
-            <a href={`mailto:${site.email}`} class="text-white/75 hover:text-pink">
+            <a href={`mailto:${site.email}`} class="text-white hover:text-pink">
               {site.email}
             </a>
           </li>
           <li class="flex gap-3">
             <Icon name="clock" size={18} class="mt-0.5 text-pink" />
-            <span class="text-white/75">{site.hours}</span>
+            <span class="text-white/85">{site.hours}</span>
           </li>
         </ul>
 
@@ -155,10 +155,10 @@ import { nav, site, whatsappLink } from '../data/site';
     </div>
 
     <div
-      class="flex flex-col gap-2 border-t border-white/10 py-6 text-body-sm text-white/45 sm:flex-row sm:items-center sm:justify-between"
+      class="flex flex-col gap-2 border-t border-white/20 py-6 text-body-sm text-white/75 sm:flex-row sm:items-center sm:justify-between"
     >
       <p>&copy; {new Date().getFullYear()} {site.name}. Est. {site.established}, {site.city}.</p>
-      <p class="font-scribble text-scribble text-white/40">Made with a lot of mess.</p>
+      <p class="font-scribble text-scribble text-white/70">Made with a lot of mess.</p>
     </div>
   </div>
 </footer>

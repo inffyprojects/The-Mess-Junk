@@ -120,6 +120,32 @@ placeholders for a real schedule.
 
 ---
 
+## 3b. Hosting: works on Cloudflare Pages *or* Vercel
+
+The brief specified Cloudflare Pages, and that is still the cheapest option.
+The site has since also been deployed to Vercel, so both are now wired up.
+
+The catch worth knowing: **`functions/` is a Cloudflare-only convention and
+does nothing on Vercel** — Vercel reads functions from a top-level `api/`
+directory instead. Deployed to Vercel without that, the enquiry form would have
+posted to `/api/contact` and got a 404 (the visitor would still have been
+offered the WhatsApp fallback, but no email would ever arrive).
+
+Both adapters now exist and share one implementation:
+
+```
+lib/enquiry.ts          all validation + delivery logic — the real code
+functions/api/*.ts      Cloudflare Pages adapter  (ignored by Vercel)
+api/*.ts                Vercel adapter            (ignored by Cloudflare)
+```
+
+Each adapter is about twenty lines whose only job is to translate that
+platform's request/response and env-var conventions. Pick either host; the
+front-end calls the same `/api/contact` URL either way, and `RESEND_API_KEY`
+goes in that host's dashboard.
+
+---
+
 ## 4. Deviations from the design document
 
 Only three, all minor:

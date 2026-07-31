@@ -8,34 +8,45 @@ export default {
   content: ['./src/**/*.{astro,html,js,jsx,md,mdx,ts,tsx}'],
   theme: {
     extend: {
+      /**
+       * Colours read the channel triplets from global.css, not the `--x`
+       * aliases. The `<alpha-value>` placeholder is what makes opacity
+       * modifiers work — `text-white/80` becomes `rgb(255 255 255 / 0.8)`.
+       *
+       * Pointing these at `var(--white)` instead looks equivalent but is not:
+       * Tailwind cannot inject an alpha channel into an opaque colour, so it
+       * drops the class entirely and the element silently inherits whatever it
+       * would otherwise. That failure is invisible until something renders
+       * dark-on-dark.
+       */
       colors: {
         // Brand core — client-specified, do not alter (§3.1)
         cobalt: {
-          DEFAULT: 'var(--cobalt)',
-          10: 'var(--cobalt-10)',
-          '05': 'var(--cobalt-05)',
+          DEFAULT: 'rgb(var(--cobalt-rgb) / <alpha-value>)',
+          10: 'rgb(var(--cobalt-10-rgb) / <alpha-value>)',
+          '05': 'rgb(var(--cobalt-05-rgb) / <alpha-value>)',
         },
         pink: {
-          DEFAULT: 'var(--pink)',
-          10: 'var(--pink-10)',
-          '05': 'var(--pink-05)',
+          DEFAULT: 'rgb(var(--pink-rgb) / <alpha-value>)',
+          10: 'rgb(var(--pink-10-rgb) / <alpha-value>)',
+          '05': 'rgb(var(--pink-05-rgb) / <alpha-value>)',
         },
-        white: 'var(--white)',
-        'off-white': 'var(--off-white)',
+        white: 'rgb(var(--white-rgb) / <alpha-value>)',
+        'off-white': 'rgb(var(--off-white-rgb) / <alpha-value>)',
 
         // Derived neutrals
         ink: {
-          DEFAULT: 'var(--ink)',
-          soft: 'var(--ink-soft)',
+          DEFAULT: 'rgb(var(--ink-rgb) / <alpha-value>)',
+          soft: 'rgb(var(--ink-soft-rgb) / <alpha-value>)',
         },
-        line: 'var(--line)',
+        line: 'rgb(var(--line-rgb) / <alpha-value>)',
 
         // Proposed third accent (§3.1 / §11 open question 3)
-        'acid-yellow': 'var(--acid-yellow)',
+        'acid-yellow': 'rgb(var(--acid-yellow-rgb) / <alpha-value>)',
 
         // Semantic — system use only, never brand-facing
-        success: 'var(--success)',
-        error: 'var(--error)',
+        success: 'rgb(var(--success-rgb) / <alpha-value>)',
+        error: 'rgb(var(--error-rgb) / <alpha-value>)',
       },
 
       fontFamily: {

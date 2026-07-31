@@ -10,29 +10,62 @@
 
 @layer base {
   :root {
+    /* ---------------------------------------------------------------------
+       Colour tokens — design document §3.1.
+
+       Each colour is stored TWICE, from a single source of truth:
+         --x-rgb   space-separated RGB channels — the actual value
+         --x       a ready-to-use colour, derived from --x-rgb
+
+       The channel form is what lets Tailwind apply opacity modifiers. Tailwind
+       cannot put an alpha channel on an opaque `var(--x)` colour — it silently
+       drops the whole class, so `text-white/80` would emit nothing at all and
+       the element would inherit dark body text. The `--x` alias exists so SVG
+       fills and plain CSS can still say `var(--pink)` and get a colour.
+
+       Change a colour by editing its --x-rgb triplet only; the alias follows.
+       The hex in each comment is the value as written in the design document.
+       --------------------------------------------------------------------- */
+
     /* Brand core — client-specified, do not alter */
-    --cobalt: #2a2ecf;
-    --pink: #e86fc4;
-    --white: #ffffff;
-    --off-white: #f8f5f0;
+    --cobalt-rgb: 42 46 207; /* #2A2ECF */
+    --pink-rgb: 232 111 196; /* #E86FC4 */
+    --white-rgb: 255 255 255; /* #FFFFFF */
+    --off-white-rgb: 248 245 240; /* #F8F5F0 */
 
     /* Derived neutrals — for text/borders, keeps everything legible */
-    --ink: #17173a; /* body text, headlines on light bg — NOT pure black */
-    --ink-soft: #5b5a78; /* secondary text, captions */
-    --line: #e7e2d8; /* dividers, card borders, on off-white */
+    --ink-rgb: 23 23 58; /* #17173A — body text, NOT pure black */
+    --ink-soft-rgb: 91 90 120; /* #5B5A78 — secondary text, captions */
+    --line-rgb: 231 226 216; /* #E7E2D8 — dividers, card borders */
 
     /* Tints — for section backgrounds, badges, hover states */
-    --cobalt-10: #e9e9fb;
-    --cobalt-05: #f4f4fd;
-    --pink-10: #fce7f5;
-    --pink-05: #fdf3fa;
+    --cobalt-10-rgb: 233 233 251; /* #E9E9FB */
+    --cobalt-05-rgb: 244 244 253; /* #F4F4FD */
+    --pink-10-rgb: 252 231 245; /* #FCE7F5 */
+    --pink-05-rgb: 253 243 250; /* #FDF3FA */
 
     /* Proposed third accent — see BUILD_NOTES.md, open question 3 */
-    --acid-yellow: #f5d949;
+    --acid-yellow-rgb: 245 217 73; /* #F5D949 */
 
     /* Semantic (system use only, never brand-facing) */
-    --success: #2e9e6b;
-    --error: #d6455b;
+    --success-rgb: 46 158 107; /* #2E9E6B */
+    --error-rgb: 214 69 91; /* #D6455B */
+
+    /* Aliases — derived, do not edit directly */
+    --cobalt: rgb(var(--cobalt-rgb));
+    --pink: rgb(var(--pink-rgb));
+    --white: rgb(var(--white-rgb));
+    --off-white: rgb(var(--off-white-rgb));
+    --ink: rgb(var(--ink-rgb));
+    --ink-soft: rgb(var(--ink-soft-rgb));
+    --line: rgb(var(--line-rgb));
+    --cobalt-10: rgb(var(--cobalt-10-rgb));
+    --cobalt-05: rgb(var(--cobalt-05-rgb));
+    --pink-10: rgb(var(--pink-10-rgb));
+    --pink-05: rgb(var(--pink-05-rgb));
+    --acid-yellow: rgb(var(--acid-yellow-rgb));
+    --success: rgb(var(--success-rgb));
+    --error: rgb(var(--error-rgb));
 
     /* Layout rhythm */
     --shell: 78rem;
@@ -416,6 +449,34 @@
     background-image: var(--grain-url);
     background-size: 180px 180px;
     opacity: 0.28;
+  }
+
+  /* ---- Sticky header (§5) ---------------------------------------------
+     "Sticky on scroll, condenses to a slim bar after 80px scroll."
+
+     Defined as one class rather than a handful of Tailwind utilities toggled
+     from JavaScript. Utilities referenced only inside a <script> depend on the
+     content scanner spotting them as bare strings, which is fragile — and a
+     header that fails to get its background is invisible over dark sections
+     rather than merely unstyled. This keeps the styling in CSS where it can be
+     seen, and leaves JS with a single class to toggle.
+     ------------------------------------------------------------------- */
+  .header-scrolled {
+    background-color: rgb(var(--off-white-rgb) / 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 1px 0 0 var(--line);
+  }
+
+  /* Slim bar. Heights match the h-20/md:h-24 resting state in Header.astro. */
+  .header-scrolled .header-bar {
+    height: 4rem;
+  }
+
+  @media (min-width: 768px) {
+    .header-scrolled .header-bar {
+      height: 4rem;
+    }
   }
 
   /* ---- Accordion (§6.6) ------------------------------------------------ */

@@ -3,9 +3,10 @@
 Marketing site for The Mess Junk, a creative art & craft workshop studio in
 Vadodara, Gujarat.
 
-**Astro + Tailwind CSS**, deployed as static files to **Cloudflare Pages** with
-two serverless Functions for the enquiry form and newsletter signup. There is no
-database and no CMS: all content is Markdown and JSON files in this repo.
+**Astro + Tailwind CSS**, deployed as static files with two serverless functions
+for the enquiry form and newsletter signup. Runs on **Cloudflare Pages** or
+**Vercel** — both are wired up. There is no database and no CMS: all content is
+Markdown and JSON files in this repo.
 
 Running cost at expected traffic: **₹0/month**, plus whatever the domain costs.
 
@@ -20,6 +21,7 @@ Running cost at expected traffic: **₹0/month**, plus whatever the domain costs
 - [Running it locally](#running-it-locally)
 - [Editing content](#editing-content) — workshops, prices, dates, FAQ
 - [Deploying to Cloudflare Pages](#deploying-to-cloudflare-pages)
+- [Deploying to Vercel instead](#deploying-to-vercel-instead)
 - [Setting the RESEND_API_KEY](#setting-the-resend_api_key)
 - [Swapping in the real logo](#swapping-in-the-real-logo)
 - [Adding real photography](#adding-real-photography) — including the shot list
@@ -214,6 +216,31 @@ custom domain, with no code change.
 
 ---
 
+## Deploying to Vercel instead
+
+The site works on Vercel too, with no code change. Import the repo — Vercel
+detects Astro, builds with `npm run build` and serves `dist`.
+
+The one thing to know: **`functions/` is Cloudflare-only and does nothing on
+Vercel.** Vercel reads serverless functions from the top-level **`api/`**
+directory instead. Both exist in this repo:
+
+```
+functions/api/contact.ts     Cloudflare Pages  (Workers runtime)
+api/contact.ts               Vercel            (Edge runtime)
+lib/enquiry.ts               the actual logic, shared by both
+```
+
+Each platform file is a ~20-line adapter; all the validation, sanitising,
+email composition and delivery lives once in `lib/enquiry.ts`, so the two hosts
+cannot drift apart. Whichever host you use, the front-end calls the same
+`/api/contact` URL and the unused directory is simply ignored.
+
+Set the same environment variables (below) under **Project → Settings →
+Environment Variables** in the Vercel dashboard, then redeploy.
+
+---
+
 ## Setting the RESEND_API_KEY
 
 The enquiry form and newsletter signup send email through
@@ -224,15 +251,21 @@ pre-filled WhatsApp link instead, but you will not get emails.
 1. Create a free Resend account and verify the login.
 2. **API Keys** → **Create API Key**. Sending permission is enough. Copy it —
    Resend shows it once.
-3. Cloudflare dashboard → **Workers & Pages** → **the-mess-junk** →
+3. Add the key to your host:
+
+   **Cloudflare Pages** — dashboard → **Workers & Pages** → **the-mess-junk** →
    **Settings** → **Environment variables** → **Add variable**:
 
    | Name | Value | Type |
    |---|---|---|
    | `RESEND_API_KEY` | `re_...` (the key from step 2) | **Secret** (encrypt it) |
 
-   Add it to **both** Production and Preview if you want the preview
-   deployments to send too.
+   **Vercel** — dashboard → your project → **Settings** → **Environment
+   Variables** → add `RESEND_API_KEY` with the same value, scoped to
+   Production (and Preview if you want preview deploys to send too).
+
+   On either host, add it to Preview as well if preview deployments should
+   send email.
 4. **Redeploy.** Environment variables are read at request time, but a redeploy
    is the reliable way to be sure the change has taken.
 5. Send a test enquiry through the live form and confirm it arrives at
@@ -393,9 +426,14 @@ const pieces = [
 
 ```
 ├── Docs/                        the original client brief + design document
-├── functions/api/
-│   ├── contact.ts               enquiry form → Resend (Cloudflare Function)
-│   └── newsletter.ts            newsletter signup → Resend / Buttondown
+├── lib/
+│   └── enquiry.ts               validation + email delivery (the real logic)
+├── functions/api/               Cloudflare Pages adapters (ignored by Vercel)
+│   ├── contact.ts
+│   └── newsletter.ts
+├── api/                         Vercel adapters (ignored by Cloudflare)
+│   ├── contact.ts
+│   └── newsletter.ts
 ├── public/
 │   └── favicon.svg              splat mark on cobalt
 ├── scripts/

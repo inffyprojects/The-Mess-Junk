@@ -31,7 +31,7 @@ const isCurrent = (href: string) =>
   <div class="shell">
     <div
       id="header-bar"
-      class="flex items-center justify-between gap-6 transition-[height] duration-300 ease-brand h-20 md:h-24"
+      class="header-bar flex h-20 items-center justify-between gap-6 transition-[height] duration-300 ease-brand md:h-24"
     >
       <a
         href="/"
@@ -153,25 +153,19 @@ const isCurrent = (href: string) =>
 
 <script>
   const header = document.getElementById('site-header')!;
-  const bar = document.getElementById('header-bar')!;
   const toggle = document.getElementById('nav-toggle')!;
   const close = document.getElementById('nav-close')!;
   const menu = document.getElementById('mobile-nav')!;
 
-  /* Condense after 80px, per §5. The threshold is checked against a stored
-     state so we only touch the DOM when it actually changes. */
+  /* Condense after 80px, per §5. One class does the whole job — see
+     `.header-scrolled` in global.css. The threshold is checked against a
+     stored state so we only touch the DOM when it actually changes. */
   let condensed = false;
   const onScroll = () => {
     const next = window.scrollY > 80;
     if (next === condensed) return;
     condensed = next;
-    header.classList.toggle('bg-off-white/85', next);
-    header.classList.toggle('backdrop-blur-md', next);
-    header.classList.toggle('shadow-[0_1px_0_0_var(--line)]', next);
-    bar.classList.toggle('h-20', !next);
-    bar.classList.toggle('md:h-24', !next);
-    bar.classList.toggle('h-16', next);
-    bar.classList.toggle('md:h-16', next);
+    header.classList.toggle('header-scrolled', next);
   };
   onScroll();
   window.addEventListener('scroll', onScroll, { passive: true });
