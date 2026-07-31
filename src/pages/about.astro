@@ -1,0 +1,225 @@
+---
+/**
+ * About Us — design doc §6.2.
+ *
+ *   · Hero band: short brand story set large, editorial, lots of whitespace
+ *   · Mission/vision as a pull-quote (large Bricolage, blob behind it)
+ *   · Founders: 3 portrait cards, name / role / one-line bio (Q15)
+ *   · "What makes us different": the USP list as a short numbered list with
+ *     icons, not paragraphs (Q19)
+ *
+ * All copy is drawn from the questionnaire answers rather than invented.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import ShotPanel from '../components/ShotPanel.astro';
+import CtaBand from '../components/CtaBand.astro';
+import Icon from '../components/Icon.astro';
+import type { IconName } from '../data/icons';
+import Blob from '../components/motifs/Blob.astro';
+import Grain from '../components/motifs/Grain.astro';
+import type { ShotId } from '../data/shots';
+import { site } from '../data/site';
+
+/* Questionnaire Q15 */
+const founders = [
+  {
+    name: 'Aditi Musalgaonkar',
+    role: 'Founder & Creative Director',
+    shot: 'founder-aditi' as ShotId,
+    bio: 'Started The Mess Junk on the conviction that most people stop making things far too early — usually the first time somebody tells them they are not artistic.',
+  },
+  {
+    name: 'Abhinav Singh Rajput',
+    role: 'Co-founder & Operations Lead',
+    shot: 'founder-abhinav' as ShotId,
+    bio: 'Runs everything that has to work before a session starts: the bookings, the materials, the kiln schedule, and the part where twenty people arrive at once.',
+  },
+  {
+    name: 'Khadija Sulaimani',
+    role: 'Co-founder & Creative Director',
+    shot: 'founder-khadija' as ShotId,
+    bio: 'Designs what actually happens at the table — the first demo, the order things are taught in, and what you walk out holding at the end.',
+  },
+];
+
+/* Questionnaire Q19 — all six USPs, as a short numbered list with icons.
+   The home page shows an edited-down four (§6.1.3); this is the full set. */
+const usps: { icon: IconName; title: string; body: string }[] = [
+  { icon: 'lightbulb', title: 'Beginner-friendly by design', body: 'Every session assumes you have never done this before.' },
+  { icon: 'users', title: 'Workshops for all age groups', body: 'Six-year-olds through sixty-year-olds, in the same studio.' },
+  { icon: 'package', title: 'Premium materials included', body: 'Real clay, real pigment, real tools — never the cheap version.' },
+  { icon: 'palette', title: 'Professional artists teaching', body: 'Working artists run our sessions, not demonstrators reading a script.' },
+  { icon: 'heart-handshake', title: 'A platform for other makers', body: 'Good at something? We give you the studio, the kit and the audience to teach it.' },
+  { icon: 'ticket', title: 'Community over transactions', body: 'We are building a creative community in Vadodara, not selling seats.' },
+];
+---
+
+<BaseLayout
+  title="About Us"
+  description={`${site.description} Founded in ${site.established} by Aditi Musalgaonkar, Abhinav Singh Rajput and Khadija Sulaimani in ${site.city}, Gujarat.`}
+  whatsappMessage="Hi The Mess Junk! I'd like to know more about the studio."
+>
+  <PageHero
+    eyebrow={`Est. ${site.established} · ${site.city}`}
+    title="Every masterpiece begins with a little mess"
+    underline="mess"
+    lede="The Mess Junk is a creative workshop studio that welcomes people of all ages to come together, make a mess, and create without fear."
+    blobVariant={3}
+    blobColor="var(--cobalt)"
+  />
+
+  <!-- Story, editorial: text left, one supporting panel right (§6.2) -->
+  <section class="section-tight">
+    <div class="shell">
+      <div class="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-16">
+        <div class="reveal">
+          <p class="eyebrow">Why we started</p>
+          <h2 class="mt-3 text-display-lg">Most people are told once that they can't draw</h2>
+          <div class="mt-5 space-y-4 text-body-lg text-ink-soft">
+            <p>
+              And that is usually it. The paints go in a cupboard, the instinct to
+              make something gets rerouted into work, and twenty years later
+              people describe themselves as "not creative" as if it were a fixed
+              trait rather than a habit they were talked out of.
+            </p>
+            <p>
+              We opened a room in Vadodara to argue with that. There is clay on
+              the wheel, paint on the table and someone on hand who has done it
+              a few hundred times — and nobody keeping score.
+            </p>
+          </div>
+        </div>
+
+        <div class="reveal" style="--reveal-delay:80ms">
+          <ShotPanel shot="about-story" caption />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Mission as pull-quote with blob behind it (§6.2) -->
+  <section class="section relative overflow-hidden">
+    <Blob
+      variant={1}
+      color="var(--pink)"
+      opacity={0.16}
+      class="absolute left-1/2 top-1/2 w-[92%] -translate-x-1/2 -translate-y-1/2 md:w-[62%]"
+    />
+
+    <div class="shell relative z-[2]">
+      <figure class="reveal mx-auto max-w-3xl text-center">
+        <p class="eyebrow">Where we are going</p>
+        <blockquote class="mt-5">
+          <p class="font-display text-display-lg">
+            To become India's most loved creative workshop community — offering
+            unique artistic experiences for every age group.
+          </p>
+        </blockquote>
+        <figcaption class="mt-6 font-scribble text-scribble text-ink-soft">
+          — the whole plan, honestly
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- Founders (§6.2) -->
+  <section class="section relative overflow-hidden bg-cobalt-05">
+    <Blob variant={4} color="var(--cobalt)" opacity={0.09} class="absolute -right-[12%] -top-[30%] w-[42%]" />
+
+    <div class="shell relative z-[2]">
+      <div class="reveal">
+        <p class="eyebrow">The team</p>
+        <h2 class="mt-3 text-display-lg">Three people, one very messy room</h2>
+        <p class="mt-4 max-w-prose text-body-lg text-ink-soft">
+          A new studio, run by the people who are actually in it — you will meet
+          all three of us soon enough.
+        </p>
+      </div>
+
+      <ul class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {
+          founders.map((f, i) => (
+            <li class="reveal" style={`--reveal-delay:${i * 70}ms`}>
+              <div class="card card-interactive h-full">
+                <ShotPanel shot={f.shot} index={i} class="!rounded-none" />
+                <div class="p-6">
+                  <h3 class="font-display text-[1.2rem] font-bold leading-tight tracking-tight">
+                    {f.name}
+                  </h3>
+                  <p class="mt-1 text-body-sm font-semibold text-cobalt">{f.role}</p>
+                  <p class="mt-3 text-body-sm font-normal text-ink-soft">{f.bio}</p>
+                </div>
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- What makes us different — numbered list with icons (§6.2) -->
+  <section class="section">
+    <div class="shell">
+      <div class="reveal">
+        <p class="eyebrow">What makes us different</p>
+        <h2 class="mt-3 text-display-lg">Six things we decided up front</h2>
+      </div>
+
+      <ol class="mt-10 grid gap-x-10 gap-y-8 md:grid-cols-2">
+        {
+          usps.map((u, i) => (
+            <li class="reveal flex gap-5" style={`--reveal-delay:${(i % 2) * 70}ms`}>
+              <span
+                class="mt-0.5 font-display text-[1.75rem] font-bold leading-none tracking-tight text-cobalt/35"
+                aria-hidden="true"
+              >
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <div>
+                <h3 class="flex items-center gap-2 font-display text-[1.15rem] font-bold tracking-tight">
+                  <Icon name={u.icon} size={19} class="text-cobalt" />
+                  {u.title}
+                </h3>
+                <p class="mt-1.5 text-body-md text-ink-soft">{u.body}</p>
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <!-- Studio facts -->
+  <section class="section-tight">
+    <div class="shell">
+      <div class="reveal relative overflow-hidden rounded-card bg-ink p-8 text-white md:p-12">
+        <Blob variant={2} color="var(--cobalt)" opacity={0.35} class="absolute -left-[8%] -top-[70%] w-[42%]" />
+        <Grain opacity={0.22} />
+
+        <dl class="relative z-[2] grid gap-8 sm:grid-cols-3">
+          <div>
+            <dt class="text-label uppercase tracking-[0.09em] text-white/50">Founded</dt>
+            <dd class="mt-2 font-display text-[2rem] font-bold tracking-tight">{site.established}</dd>
+            <p class="mt-1 text-body-sm text-white/60">A brand-new creative startup</p>
+          </div>
+          <div>
+            <dt class="text-label uppercase tracking-[0.09em] text-white/50">Based in</dt>
+            <dd class="mt-2 font-display text-[2rem] font-bold tracking-tight">{site.city}</dd>
+            <p class="mt-1 text-body-sm text-white/60">Expanding across Gujarat next</p>
+          </div>
+          <div>
+            <dt class="text-label uppercase tracking-[0.09em] text-white/50">Ages welcome</dt>
+            <dd class="mt-2 font-display text-[2rem] font-bold tracking-tight">6 to 60+</dd>
+            <p class="mt-1 text-body-sm text-white/60">Kids, teens, adults, teams</p>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <CtaBand
+    title="Come and see the room"
+    lede="Book a seat at the next public session, or ask us about running one for your group."
+  />
+</BaseLayout>

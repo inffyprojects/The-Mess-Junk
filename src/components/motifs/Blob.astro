@@ -1,0 +1,75 @@
+---
+/**
+ * Blob shape — design doc §3.4.1
+ *
+ * Organic, hand-drawn-feel paint-puddle shapes used as background accents
+ * behind headlines and across section seams. The doc is explicit about
+ * restraint: "Keep them large, soft-edged, and few — one or two per page max,
+ * not confetti." Nothing here enforces that; it is a layout discipline.
+ *
+ * Purely decorative, so always aria-hidden (§10).
+ */
+
+interface Props {
+  /** Which of the four puddle silhouettes to draw */
+  variant?: 1 | 2 | 3 | 4;
+  /** Any CSS colour — pass a token like `var(--pink)` */
+  color?: string;
+  opacity?: number;
+  /**
+   * Draw the outline only. Layering a stroked blob over a filled one is what
+   * gives a composition its "drawn" quality — two flat fills alone read as
+   * gradient orbs.
+   */
+  outline?: boolean;
+  /** Stroke weight in the 200x200 viewBox space */
+  strokeWidth?: number;
+  /** Slow 26s drift, hero sections only (§8) */
+  drift?: boolean;
+  class?: string;
+}
+
+const {
+  variant = 1,
+  color = 'var(--cobalt)',
+  opacity = 0.12,
+  outline = false,
+  strokeWidth = 2,
+  drift = false,
+  class: className = '',
+} = Astro.props;
+
+// Four silhouettes, all drawn on the same 200x200 viewBox so they are
+// interchangeable in any slot.
+//
+// Each is a closed Catmull-Rom spline through 7–11 points whose radius AND
+// angular spacing are both irregular. Both kinds of irregularity matter: vary
+// only the radius and you get a circle with dents, which reads as a generic
+// gradient orb — precisely the "purple-gradient SaaS template" look §2 rules
+// out. Uneven lobe spacing is what makes it read as spilled paint.
+const PATHS: Record<number, string> = {
+  1: 'M157.3 96.0C152.4 110.9 147.5 126.2 139.6 137.6C131.8 149.0 121.0 159.6 110.4 164.3C99.8 169.1 87.5 171.1 76.1 166.1C64.7 161.1 46.9 147.1 41.8 134.4C36.7 121.8 43.1 107.6 45.6 90.3C48.1 72.9 47.7 38.8 57.0 30.5C66.3 22.1 82.8 37.0 101.4 40.0C120.1 42.9 159.4 38.7 168.7 48.1C178.0 57.4 162.1 81.0 157.3 96.0Z',
+  2: 'M185.6 119.2C185.9 134.2 139.6 137.1 122.5 144.3C105.3 151.5 94.2 166.0 82.6 162.3C71.0 158.5 60.6 135.2 53.0 121.7C45.5 108.2 33.3 95.2 37.2 81.3C41.0 67.5 62.3 42.9 76.2 38.4C90.1 34.0 102.3 41.2 120.6 54.7C138.8 68.1 185.3 104.3 185.6 119.2Z',
+  3: 'M162.1 97.8C164.4 112.6 179.6 125.7 174.3 137.8C168.9 149.9 144.2 165.5 130.1 170.2C116.0 174.9 103.0 169.1 89.4 166.0C75.8 163.0 59.1 160.1 48.6 151.6C38.0 143.1 28.0 128.0 26.0 115.1C24.0 102.2 31.4 83.4 36.5 74.1C41.5 64.8 46.7 64.9 56.5 59.2C66.3 53.5 82.5 44.2 95.4 40.0C108.3 35.8 123.1 32.5 133.9 34.0C144.8 35.4 155.8 38.1 160.5 48.7C165.2 59.3 159.8 82.9 162.1 97.8Z',
+  4: 'M153.0 97.4C153.5 113.1 150.3 148.1 141.3 161.4C132.3 174.8 116.4 180.3 99.0 177.4C81.7 174.6 52.1 154.7 37.2 144.5C22.4 134.2 6.3 128.2 9.8 115.9C13.3 103.7 44.9 84.3 58.2 71.2C71.6 58.0 76.7 37.8 90.1 37.1C103.5 36.4 128.2 57.1 138.6 67.2C149.1 77.2 152.6 81.7 153.0 97.4Z',
+};
+
+const path = PATHS[variant] ?? PATHS[1];
+---
+
+<svg
+  class:list={['pointer-events-none select-none', drift && 'animate-drift', className]}
+  viewBox="0 0 200 200"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  aria-hidden="true"
+  focusable="false"
+  style={`opacity:${opacity}`}
+>
+  <path
+    d={path}
+    fill={outline ? 'none' : color}
+    stroke={outline ? color : 'none'}
+    stroke-width={outline ? strokeWidth : undefined}
+  ></path>
+</svg>

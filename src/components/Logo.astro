@@ -1,0 +1,53 @@
+---
+/**
+ * Interim wordmark — design doc §3.3
+ *
+ * The client's real logo is "in development." Per the doc we do not wait on it
+ * and do not draw a placeholder box: this is a type-based wordmark that stands
+ * on its own and upgrades cleanly later.
+ *
+ *   "the mess junk" — Bricolage Grotesque 800, lowercase, with "mess" in
+ *   --pink and the rest in --ink (or white on dark), plus the splat dot
+ *   above the "j" in "junk".
+ *
+ * TO SWAP IN THE REAL LOGO: replace the markup between the <a> tags with an
+ * <img>/<svg> of the supplied asset and keep the sizing classes. Nothing else
+ * in the project references the wordmark's internals. See README.
+ */
+import SplatDot from './motifs/SplatDot.astro';
+
+interface Props {
+  /** `light` = ink type for light backgrounds, `dark` = white type on cobalt */
+  tone?: 'light' | 'dark';
+  class?: string;
+}
+
+const { tone = 'light', class: className = '' } = Astro.props;
+
+const baseColor = tone === 'dark' ? 'text-white' : 'text-ink';
+// Pink on cobalt is a legible pairing at wordmark size; pink on off-white is
+// the doc's own logo spec. Both are display-size type, well clear of the
+// small-text contrast limit in §3.1.
+const messColor = tone === 'dark' ? 'text-pink' : 'text-pink';
+---
+
+<span
+  class:list={[
+    'font-display font-extrabold lowercase tracking-tight',
+    'inline-flex items-baseline gap-[0.22em] leading-none',
+    baseColor,
+    className,
+  ]}
+>
+  <span>the</span>
+  <span class={messColor}>mess</span>
+  <span class="relative">
+    junk
+    <!-- The dot sits over the ascender of the "j" -->
+    <SplatDot
+      size={11}
+      color="var(--pink)"
+      class="absolute -top-[0.62em] left-[0.06em]"
+    />
+  </span>
+</span>

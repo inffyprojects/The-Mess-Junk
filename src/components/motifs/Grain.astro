@@ -1,0 +1,31 @@
+---
+/**
+ * Grain overlay — design doc §3.4.2
+ *
+ * "a subtle SVG turbulence-filter noise texture at ~3-4% opacity over colour
+ * blocks. This single move does more for 'premium, not flat-vector' than
+ * anything else."
+ *
+ * The texture itself lives in one place — `--grain-url` in global.css — so the
+ * whole site shares a single tile rather than each surface inventing its own.
+ * This component is the standalone version, for colour blocks with no photo
+ * beneath them; `.photo` applies the same tile via its own ::after.
+ *
+ * Requires a `position: relative` ancestor.
+ */
+
+interface Props {
+  /** 0–1. Roughly 0.3 here lands at the doc's 3–4% effective coverage. */
+  opacity?: number;
+  class?: string;
+}
+
+const { opacity = 0.3, class: className = '' } = Astro.props;
+---
+
+<div
+  class:list={['pointer-events-none absolute inset-0 z-[1]', className]}
+  aria-hidden="true"
+  style={`background-image:var(--grain-url);background-size:180px 180px;opacity:${opacity}`}
+>
+</div>

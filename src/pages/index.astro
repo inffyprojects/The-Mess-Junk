@@ -1,0 +1,316 @@
+---
+/**
+ * Home — design doc §6.1.
+ *
+ * Section order follows the doc exactly:
+ *   1 Hero · 2 Workshop categories · 3 Why Mess Junk · 4 How it works
+ *   5 Meet the founders · 6 Community band · 7 Final CTA
+ *
+ * Two of those are deliberately absent, per the doc itself:
+ *   · Testimonials — §4 says "skip the section entirely at launch rather than
+ *     showing a placeholder"; the client has none yet (questionnaire Q36).
+ *   · The Instagram community band (§6.1.6) — "until then, skip this band
+ *     entirely rather than showing an empty grid." The account has no content
+ *     at launch, so it is not rendered. See BUILD_NOTES.md for how to switch
+ *     it on.
+ * The order below still degrades gracefully with both absent.
+ */
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SectionHeading from '../components/SectionHeading.astro';
+import ShotPanel from '../components/ShotPanel.astro';
+import CtaBand from '../components/CtaBand.astro';
+import Icon from '../components/Icon.astro';
+import type { IconName } from '../data/icons';
+import Blob from '../components/motifs/Blob.astro';
+import Grain from '../components/motifs/Grain.astro';
+import Sparkle from '../components/motifs/Sparkle.astro';
+import MarkerUnderline from '../components/motifs/MarkerUnderline.astro';
+import { site, whatsappLink, formatPrice } from '../data/site';
+import type { ShotId } from '../data/shots';
+
+/* Category strip (§6.1.2) — six entries mirroring the event types the client
+   listed in Q21, each linking into the matching filter on /workshops. */
+const categories: { label: string; blurb: string; shot: ShotId; filter: string }[] = [
+  { label: 'Kids', blurb: 'Ages 6–12, and no instruction to stay inside the lines.', shot: 'cat-kids', filter: 'kids' },
+  { label: 'Teens', blurb: 'A room to make things in that is not school.', shot: 'cat-teens', filter: 'teens' },
+  { label: 'Adults', blurb: 'Evenings and weekends, shared tables, no experience needed.', shot: 'cat-adults', filter: 'adults' },
+  { label: 'Corporate', blurb: 'Team sessions at your office or ours.', shot: 'cat-corporate', filter: 'corporate-colleges' },
+  { label: 'College', blurb: 'Pop-ups run on campus, priced for students.', shot: 'cat-college', filter: 'corporate-colleges' },
+  { label: 'Private', blurb: 'The whole studio, your group, your occasion.', shot: 'cat-private', filter: 'private-custom' },
+];
+
+/* §6.1.3 — the client gave six USPs (Q19). The doc says edit down to 3–4
+   punchy ones rather than shipping "a 6-item wall of text". These four cover
+   the distinct claims; the remaining two (professional artists, community
+   focus) are folded into the copy of these. */
+const usps: { icon: IconName; title: string; body: string }[] = [
+  {
+    icon: 'lightbulb',
+    title: 'Built for beginners',
+    body: 'Every session starts from nothing-known. Professional artists run the room and teach the craft from the first step.',
+  },
+  {
+    icon: 'users',
+    title: 'Every age at the table',
+    body: 'Six-year-olds through sixty-year-olds, kids clubs through corporate away-days. The craft changes; the welcome does not.',
+  },
+  {
+    icon: 'package',
+    title: 'Premium materials included',
+    body: 'Real clay, real pigment, real tools. Nothing on the table is the cheap version, and it is all in the price.',
+  },
+  {
+    icon: 'heart-handshake',
+    title: 'A studio you can host in',
+    body: 'Make something you are good at? We give makers the studio, the kit and the audience to run their own workshop.',
+  },
+];
+
+/* §6.1.4 — three steps. Illustrated with the motif language (blob + line
+   icon), not clip-art or an icon pack. */
+const steps: { icon: IconName; title: string; body: string }[] = [
+  { icon: 'palette', title: 'Pick a workshop', body: 'Browse the full list by age group or craft. Every card shows what it costs and how long it runs.' },
+  { icon: 'calendar', title: 'Check a date', body: 'Upcoming sessions and seats left are on the Contact page. Pick one and it carries into your enquiry.' },
+  { icon: 'whatsapp', title: 'Book on WhatsApp', body: 'Send the enquiry or message us directly. We confirm your seat and share payment details on the same thread.' },
+];
+
+/* §6.1.5 — founders from questionnaire Q15 */
+const founders = [
+  { name: 'Aditi Musalgaonkar', role: 'Founder & Creative Director', shot: 'founder-aditi' as ShotId, bio: 'Started The Mess Junk on the conviction that most people stopped making things far too early.' },
+  { name: 'Abhinav Singh Rajput', role: 'Co-founder & Operations Lead', shot: 'founder-abhinav' as ShotId, bio: 'Keeps the studio running — the bookings, the materials, and the part where 20 people arrive at once.' },
+  { name: 'Khadija Sulaimani', role: 'Co-founder & Creative Director', shot: 'founder-khadija' as ShotId, bio: 'Designs what happens at the table, from the first demo to what you walk out holding.' },
+];
+
+const workshops = (await getCollection('workshops', ({ data }) => !data.draft)).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+const cheapest = Math.min(...workshops.map((w) => w.data.priceFrom));
+---
+
+<BaseLayout
+  title={site.name}
+  description={`${site.description} Art and craft workshops in Vadodara for kids, teens, adults, colleges and corporate teams. Book a seat or enquire on WhatsApp.`}
+>
+  <!-- ===================================================================
+       1. HERO (§6.1.1)
+       Full-bleed, headline is the tagline itself with "Mess" carrying the
+       marker underline, blob accent behind it, two CTAs.
+       =================================================================== -->
+  <section class="relative overflow-hidden">
+    <div class="absolute inset-0 -z-10">
+      <ShotPanel shot="hero-home" tone="cobalt" drift fill class="!rounded-none" />
+    </div>
+
+    <div class="shell relative flex min-h-[clamp(30rem,78vh,44rem)] items-center py-16 md:py-24">
+      <div class="max-w-3xl">
+        <p class="reveal inline-flex items-center gap-2 text-label uppercase tracking-[0.09em] text-white/75">
+          <Sparkle size={14} />
+          Est. {site.established} · {site.city}, {site.region}
+        </p>
+
+        <h1 class="reveal mt-5 text-display-xl text-white text-shadow-hero" style="--reveal-delay:60ms">
+          Where making a
+          <span class="relative inline-block">
+            Mess
+            <MarkerUnderline color="var(--acid-yellow)" weight={8} />
+          </span>
+          makes sense
+        </h1>
+
+        <p class="reveal mt-6 max-w-xl text-body-lg text-white/85" style="--reveal-delay:120ms">
+          A creative workshop studio in Vadodara. Clay, paint, resin, print and
+          everything in between — for anyone who wants to make something and
+          has been told they can't.
+        </p>
+
+        <div class="reveal mt-9 flex flex-col gap-3 sm:flex-row" style="--reveal-delay:180ms">
+          <a href="/contact/" class="btn btn-primary">Book a Workshop</a>
+          <a
+            href={whatsappLink()}
+            target="_blank"
+            rel="noopener"
+            class="btn btn-ghost-pink !border-white/55 !text-white hover:!border-pink hover:!bg-pink hover:!text-ink"
+          >
+            <Icon name="whatsapp" size={18} />
+            Chat on WhatsApp
+          </a>
+        </div>
+
+        <p class="reveal mt-6 text-body-sm text-white/65" style="--reveal-delay:240ms">
+          Sessions from {formatPrice(cheapest)} per person · No experience needed · All materials included
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       2. WHAT WE DO — workshop category strip (§6.1.2)
+       Pinterest-style image-first cards, 4:3, linking into /workshops.
+       =================================================================== -->
+  <section class="section">
+    <div class="shell">
+      <SectionHeading
+        eyebrow="What we do"
+        title="Workshops for whoever turns up"
+        lede="Six formats, one studio. Pick the room you belong in — or book the whole place for your own."
+      />
+
+      <ul class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {
+          categories.map((cat, i) => (
+            <li class="reveal" style={`--reveal-delay:${(i % 3) * 70}ms`}>
+              <a
+                href={`/workshops/?category=${cat.filter}`}
+                class="card card-interactive group block h-full"
+              >
+                <ShotPanel shot={cat.shot} index={i} class="!rounded-none" />
+                <div class="flex items-start justify-between gap-4 p-5">
+                  <div>
+                    <h3 class="font-display text-[1.3rem] font-bold leading-tight tracking-tight">
+                      {cat.label}
+                    </h3>
+                    <p class="mt-1.5 text-body-sm font-normal text-ink-soft">{cat.blurb}</p>
+                  </div>
+                  <Icon
+                    name="arrow-up-right"
+                    size={20}
+                    class="mt-1 shrink-0 text-cobalt transition-transform duration-300 ease-brand group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                  />
+                </div>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       3. WHY MESS JUNK (§6.1.3)
+       Four USPs, one motif icon each. Sits on a pink-05 field with a blob
+       bleeding across the top seam (§7 section divider).
+       =================================================================== -->
+  <section class="section relative overflow-hidden bg-pink-05">
+    <Blob variant={4} color="var(--pink)" opacity={0.14} class="absolute -right-[18%] -top-[36%] w-[54%]" />
+    <Grain opacity={0.2} />
+
+    <div class="shell relative z-[2]">
+      <SectionHeading
+        eyebrow="Why Mess Junk"
+        title="An art studio that assumes you have never done this"
+        lede="Most creative spaces quietly expect you to already be good. This one does not."
+      />
+
+      <ul class="mt-10 grid gap-x-8 gap-y-9 sm:grid-cols-2">
+        {
+          usps.map((usp, i) => (
+            <li class="reveal flex gap-4" style={`--reveal-delay:${(i % 2) * 70}ms`}>
+              <span class="relative mt-0.5 inline-flex h-12 w-12 shrink-0 items-center justify-center">
+                <Blob
+                  variant={((i % 4) + 1) as 1 | 2 | 3 | 4}
+                  color="var(--cobalt)"
+                  opacity={0.14}
+                  class="absolute inset-0 h-full w-full"
+                />
+                <Icon name={usp.icon} size={22} class="relative text-cobalt" />
+              </span>
+              <div>
+                <h3 class="font-display text-[1.15rem] font-bold tracking-tight">{usp.title}</h3>
+                <p class="mt-1.5 text-body-md text-ink-soft">{usp.body}</p>
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       4. HOW IT WORKS (§6.1.4) — 3-step strip
+       =================================================================== -->
+  <section class="section">
+    <div class="shell">
+      <SectionHeading
+        eyebrow="How it works"
+        title="Three steps, no booking engine"
+        lede="We keep it on WhatsApp on purpose — you get a person, not a checkout flow."
+        align="center"
+      />
+
+      <ol class="mt-12 grid gap-8 md:grid-cols-3 md:gap-6">
+        {
+          steps.map((step, i) => (
+            <li class="reveal relative text-center" style={`--reveal-delay:${i * 70}ms`}>
+              <div class="relative mx-auto flex h-24 w-24 items-center justify-center">
+                <Blob
+                  variant={(i + 1) as 1 | 2 | 3 | 4}
+                  color={i === 1 ? 'var(--pink)' : 'var(--cobalt)'}
+                  opacity={0.16}
+                  class="absolute inset-0 h-full w-full"
+                />
+                <Icon name={step.icon} size={30} class="relative text-cobalt" />
+                <span class="absolute -right-1 -top-1 inline-flex h-7 w-7 items-center justify-center rounded-pill bg-cobalt font-display text-body-sm font-bold text-white">
+                  {i + 1}
+                </span>
+              </div>
+              <h3 class="mt-5 font-display text-[1.2rem] font-bold tracking-tight">{step.title}</h3>
+              <p class="mx-auto mt-2 max-w-xs text-body-md text-ink-soft">{step.body}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       5. MEET THE FOUNDERS (§6.1.5)
+       Portraits use the designed 4:5 panel until real photography exists.
+       =================================================================== -->
+  <section class="section relative overflow-hidden bg-cobalt-05">
+    <Blob variant={2} color="var(--cobalt)" opacity={0.1} class="absolute -left-[16%] bottom-[-30%] w-[48%]" />
+
+    <div class="shell relative z-[2]">
+      <SectionHeading
+        eyebrow="Who runs it"
+        title="Three people, one very messy room"
+      />
+
+      <ul class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {
+          founders.map((f, i) => (
+            <li class="reveal" style={`--reveal-delay:${i * 70}ms`}>
+              <div class="card card-interactive h-full">
+                <ShotPanel shot={f.shot} index={i} class="!rounded-none" />
+                <div class="p-5">
+                  <h3 class="font-display text-[1.2rem] font-bold leading-tight tracking-tight">
+                    {f.name}
+                  </h3>
+                  <p class="mt-1 text-body-sm text-cobalt">{f.role}</p>
+                  <p class="mt-3 text-body-sm font-normal text-ink-soft">{f.bio}</p>
+                </div>
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+
+      <p class="reveal mt-8">
+        <a href="/about/" class="btn btn-ghost">
+          More about the studio
+          <Icon name="arrow-right" size={17} />
+        </a>
+      </p>
+    </div>
+  </section>
+
+  <!--
+    6. COMMUNITY / SOCIAL PROOF BAND (§6.1.6) — intentionally not rendered.
+    The doc: "Instagram feed embed once the account has content; until then,
+    skip this band entirely rather than showing an empty grid."
+    Testimonials are likewise absent per §4. See BUILD_NOTES.md.
+  -->
+
+  <!-- 7. FINAL CTA (§6.1.7) -->
+  <CtaBand />
+</BaseLayout>

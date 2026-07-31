@@ -1,0 +1,229 @@
+---
+/**
+ * Pricing — design doc §6.5.
+ *
+ * "Not a rigid SaaS-style 3-tier pricing table (wrong tone for this business)
+ * — instead, a range-based, honest layout."
+ *
+ * So: no per-tier feature-comparison matrix, no "most popular" ribbon, no
+ * monthly/annual toggle. Three honest ranges from the questionnaire (Q25, Q26,
+ * Q29), each ending in "Get a Custom Quote" which opens the enquiry form
+ * pre-filled with that category, plus the add-on and inclusion clarifiers
+ * inline rather than as a dense table.
+ */
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import CtaBand from '../components/CtaBand.astro';
+import Icon from '../components/Icon.astro';
+import type { IconName } from '../data/icons';
+import Blob from '../components/motifs/Blob.astro';
+import Grain from '../components/motifs/Grain.astro';
+import Sparkle from '../components/motifs/Sparkle.astro';
+import { whatsappLink } from '../data/site';
+
+const tiers = (await getCollection('pricing')).sort((a, b) => a.data.order - b.data.order);
+
+/* Add-ons from questionnaire Q23 */
+const addons: { icon: IconName; title: string; body: string }[] = [
+  {
+    icon: 'coffee',
+    title: 'Refreshments',
+    body: 'Tea, coffee and something to eat, laid on for the group. Priced per head.',
+  },
+  {
+    icon: 'gift',
+    title: 'Personalised kits',
+    body: 'Take-home kits branded for your event, team or occasion.',
+  },
+  {
+    icon: 'map-pin',
+    title: 'Venue booking',
+    body: 'If your group is too big for our studio, we will find and book a space in Vadodara.',
+  },
+];
+
+/* §6.5: "Small FAQ-style clarifiers inline (what's included …) rather than a
+   separate dense table." */
+const clarifiers = [
+  {
+    q: 'Why is everything a range?',
+    a: 'Because material costs differ enormously between crafts. A journaling session and a rug-tufting session are not the same spend, and pretending otherwise would mean overcharging for one of them.',
+  },
+  {
+    q: 'What moves the price?',
+    a: 'The craft, the group size and the session length. Bigger groups pay less per head — that is why college sessions can start at ₹350 while a three-hour tufting seat is ₹2,500.',
+  },
+  {
+    q: 'Is anything charged on the day?',
+    a: 'No. Whatever we quote covers materials, tools, the artist and any firing or finishing. Add-ons are agreed up front, never sprung on you afterwards.',
+  },
+];
+---
+
+<BaseLayout
+  title="Pricing"
+  description="Workshop pricing at The Mess Junk, Vadodara — public sessions from ₹499 to ₹2,500 per person, custom pricing for private groups of 20+, and tailored quotes for corporate and college bookings."
+  whatsappMessage="Hi The Mess Junk! I'd like a quote for a workshop."
+>
+  <PageHero
+    eyebrow="What it costs"
+    title="Honest ranges, not packages"
+    underline="Honest"
+    lede="We quote every booking properly rather than pushing you into a tier that nearly fits. Here is the shape of it, and what actually moves the number."
+    blobVariant={1}
+    blobColor="var(--cobalt)"
+  />
+
+  <!-- Tiers -->
+  <section class="section-tight">
+    <div class="shell">
+      <ul class="grid gap-6 lg:grid-cols-3">
+        {
+          tiers.map((tier, i) => {
+            const t = tier.data;
+            return (
+              <li class="reveal flex" style={`--reveal-delay:${i * 70}ms`}>
+                <div
+                  class:list={[
+                    'card relative flex w-full flex-col overflow-hidden p-7 md:p-8',
+                    t.featured && '!border-cobalt',
+                  ]}
+                >
+                  {t.featured && (
+                    <Blob
+                      variant={2}
+                      color="var(--cobalt)"
+                      opacity={0.08}
+                      class="absolute -right-[18%] -top-[26%] w-[62%]"
+                    />
+                  )}
+
+                  <div class="relative z-[2] flex flex-1 flex-col">
+                    {t.featured && (
+                      <p class="mb-3 inline-flex w-fit items-center gap-1.5 rounded-pill bg-acid-yellow px-3 py-1 text-body-sm font-semibold text-ink">
+                        <Sparkle size={13} color="var(--ink)" />
+                        Most people start here
+                      </p>
+                    )}
+
+                    <h2 class="font-display text-[1.35rem] font-bold tracking-tight">{t.name}</h2>
+
+                    <p class="mt-4 font-display text-[2rem] font-bold leading-none tracking-tight text-cobalt">
+                      {t.price}
+                    </p>
+                    {t.priceNote && <p class="mt-1.5 text-body-sm text-ink-soft">{t.priceNote}</p>}
+
+                    <p class="mt-4 text-body-md text-ink-soft">{t.summary}</p>
+
+                    <ul class="mt-6 space-y-2.5 border-t border-line pt-6">
+                      {t.includes.map((inc) => (
+                        <li class="flex gap-2.5 text-body-sm">
+                          <Icon name="check" size={17} class="mt-0.5 shrink-0 text-cobalt" />
+                          <span class="text-ink-soft">{inc}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <a
+                      href={`/contact/?type=${encodeURIComponent(t.enquiryType)}`}
+                      class:list={['btn mt-8 w-full', t.featured ? 'btn-primary' : 'btn-ghost']}
+                    >
+                      Get a Custom Quote
+                    </a>
+                  </div>
+                </div>
+              </li>
+            );
+          })
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- Add-ons (Q23) -->
+  <section class="section relative overflow-hidden bg-cobalt-05">
+    <Blob variant={4} color="var(--cobalt)" opacity={0.1} class="absolute -left-[14%] -bottom-[40%] w-[44%]" />
+
+    <div class="shell relative z-[2]">
+      <div class="reveal">
+        <p class="eyebrow">Add-ons</p>
+        <h2 class="mt-3 text-display-lg">Things you can bolt on</h2>
+        <p class="mt-4 max-w-prose text-body-lg text-ink-soft">
+          Optional, quoted separately, and agreed before the day.
+        </p>
+      </div>
+
+      <ul class="mt-10 grid gap-6 md:grid-cols-3">
+        {
+          addons.map((a, i) => (
+            <li class="reveal card p-6" style={`--reveal-delay:${i * 70}ms`}>
+              <Icon name={a.icon} size={24} class="text-cobalt" />
+              <h3 class="mt-4 font-display text-[1.15rem] font-bold tracking-tight">{a.title}</h3>
+              <p class="mt-2 text-body-sm font-normal text-ink-soft">{a.body}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- Inline clarifiers (§6.5) -->
+  <section class="section">
+    <div class="shell">
+      <div class="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
+        <div class="reveal">
+          <p class="eyebrow">Straight answers</p>
+          <h2 class="mt-3 text-display-lg">How we price it</h2>
+          <p class="mt-4 max-w-prose text-body-md text-ink-soft">
+            Still unsure where you land? Send us the group size and the craft —
+            we will give you a real number, not a range.
+          </p>
+          <a
+            href={whatsappLink("Hi The Mess Junk! Could you quote me for a workshop? Here's my group:")}
+            target="_blank"
+            rel="noopener"
+            class="btn btn-ghost mt-6"
+          >
+            <Icon name="whatsapp" size={18} />
+            Ask for a number
+          </a>
+        </div>
+
+        <dl class="reveal divide-y divide-line border-y border-line">
+          {
+            clarifiers.map((c) => (
+              <div class="py-6">
+                <dt class="font-display text-[1.1rem] font-bold tracking-tight">{c.q}</dt>
+                <dd class="mt-2 text-body-md text-ink-soft">{c.a}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- Minimum-participants note — stated plainly, once, rather than repeated
+       as a disclaimer on every tier (§6.3). -->
+  <section class="section-tight">
+    <div class="shell">
+      <div class="reveal relative flex flex-col gap-4 overflow-hidden rounded-card bg-pink-05 p-7 sm:flex-row sm:items-center md:p-8">
+        <Grain opacity={0.2} />
+        <Icon name="users" size={26} class="relative z-[2] shrink-0 text-cobalt" />
+        <p class="relative z-[2] text-body-md text-ink">
+          <strong class="font-semibold">Private and group bookings need 20 participants minimum.</strong>
+          <span class="text-ink-soft">
+            {' '}Below that, a public session is almost always the better deal — you get the
+            same craft, the same materials and the same artists, just a shared table.
+          </span>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <CtaBand
+    title="Tell us what you are planning"
+    lede="Group size, rough date, and the kind of thing you want to make. We will come back with a proper quote."
+  />
+</BaseLayout>

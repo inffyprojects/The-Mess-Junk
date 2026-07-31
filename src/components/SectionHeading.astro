@@ -1,0 +1,59 @@
+---
+/**
+ * Section heading — eyebrow + title + optional lede.
+ *
+ * §2 borrows Apple's "one idea per section" discipline, and the client
+ * explicitly dislikes text-heavy pages, so the lede is capped to a single
+ * short paragraph by convention.
+ */
+interface Props {
+  eyebrow?: string;
+  title: string;
+  lede?: string;
+  align?: 'left' | 'center';
+  /** Renders as h2 by default; pass 'h1' on page heroes */
+  as?: 'h1' | 'h2';
+  class?: string;
+}
+
+const {
+  eyebrow,
+  title,
+  lede,
+  align = 'left',
+  as: Tag = 'h2',
+  class: className = '',
+} = Astro.props;
+
+const centered = align === 'center';
+---
+
+<div
+  class:list={[
+    'reveal',
+    centered && 'mx-auto max-w-2xl text-center',
+    className,
+  ]}
+>
+  {eyebrow && <p class="eyebrow">{eyebrow}</p>}
+  <Tag
+    class:list={[
+      Tag === 'h1' ? 'text-display-xl' : 'text-display-lg',
+      eyebrow && 'mt-3',
+    ]}
+  >
+    {title}
+  </Tag>
+  {
+    lede && (
+      <p
+        class:list={[
+          'mt-4 text-body-lg text-ink-soft',
+          centered ? 'mx-auto max-w-prose' : 'max-w-prose',
+        ]}
+      >
+        {lede}
+      </p>
+    )
+  }
+</div>

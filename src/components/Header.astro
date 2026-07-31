@@ -1,0 +1,197 @@
+---
+/**
+ * Header — design doc §5.
+ *
+ * "logo left · nav center-right · 'Book a Workshop' cobalt button + WhatsApp
+ * icon, always visible, right-aligned. Sticky on scroll, condenses to a slim
+ * bar after 80px scroll (Apple-style behaviour)."
+ *
+ * Mobile is the full-screen overlay menu from §7 — large type, blob motif in
+ * the background.
+ *
+ * This is one of the three places on the site that ships JavaScript (§ tech
+ * brief). It is ~40 lines, inline, and the nav works as plain links without it.
+ */
+import Logo from './Logo.astro';
+import Icon from './Icon.astro';
+import Blob from './motifs/Blob.astro';
+import { nav, site, whatsappLink } from '../data/site';
+
+const path = Astro.url.pathname;
+
+/** `/` matches only itself; every other entry also matches its sub-paths. */
+const isCurrent = (href: string) =>
+  href === '/' ? path === '/' : path.startsWith(href.replace(/\/$/, ''));
+---
+
+<header
+  id="site-header"
+  class="fixed inset-x-0 top-0 z-50 transition-[background-color,box-shadow,backdrop-filter] duration-300 ease-brand"
+>
+  <div class="shell">
+    <div
+      id="header-bar"
+      class="flex items-center justify-between gap-6 transition-[height] duration-300 ease-brand h-20 md:h-24"
+    >
+      <a
+        href="/"
+        class="relative z-10 shrink-0 rounded-md"
+        aria-label={`${site.name} — home`}
+      >
+        <Logo class="text-[1.35rem] md:text-[1.5rem]" />
+      </a>
+
+      <!-- Desktop nav -->
+      <nav aria-label="Primary" class="hidden lg:block">
+        <ul class="flex items-center gap-1">
+          {
+            nav.map((item) => (
+              <li>
+                <a
+                  href={item.href}
+                  aria-current={isCurrent(item.href) ? 'page' : undefined}
+                  class:list={[
+                    'inline-flex h-11 items-center rounded-pill px-3.5 text-body-sm font-medium transition-colors duration-200 ease-brand',
+                    isCurrent(item.href)
+                      ? 'text-cobalt bg-cobalt-05'
+                      : 'text-ink hover:text-cobalt hover:bg-cobalt-05',
+                  ]}
+                >
+                  {item.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+
+      <div class="flex items-center gap-2 md:gap-3">
+        <a
+          href={whatsappLink()}
+          target="_blank"
+          rel="noopener"
+          class="inline-flex h-11 w-11 items-center justify-center rounded-pill border border-line text-cobalt transition-colors duration-200 ease-brand hover:border-cobalt hover:bg-cobalt-05"
+        >
+          <Icon name="whatsapp" size={19} label="Chat with us on WhatsApp" />
+        </a>
+
+        <a href="/contact/" class="btn btn-primary hidden sm:inline-flex !min-h-[2.75rem] !px-5 text-body-sm">
+          Book a Workshop
+        </a>
+
+        <!-- Mobile menu trigger -->
+        <button
+          type="button"
+          id="nav-toggle"
+          aria-expanded="false"
+          aria-controls="mobile-nav"
+          class="inline-flex h-11 w-11 items-center justify-center rounded-pill border border-line text-ink transition-colors duration-200 ease-brand hover:border-cobalt hover:text-cobalt lg:hidden"
+        >
+          <Icon name="menu" size={20} label="Open menu" />
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Mobile overlay menu (§7): full screen, large type, blob in the background -->
+<div
+  id="mobile-nav"
+  hidden
+  class="fixed inset-0 z-[60] bg-off-white lg:hidden"
+>
+  <Blob variant={2} color="var(--pink)" opacity={0.14} class="absolute -right-[22%] -top-[10%] w-[85%]" />
+  <Blob variant={4} color="var(--cobalt)" opacity={0.1} class="absolute -bottom-[18%] -left-[24%] w-[80%]" />
+
+  <div class="shell relative flex h-full flex-col">
+    <div class="flex h-20 shrink-0 items-center justify-between md:h-24">
+      <Logo class="text-[1.35rem]" />
+      <button
+        type="button"
+        id="nav-close"
+        class="inline-flex h-11 w-11 items-center justify-center rounded-pill border border-line text-ink transition-colors hover:border-cobalt hover:text-cobalt"
+      >
+        <Icon name="close" size={20} label="Close menu" />
+      </button>
+    </div>
+
+    <nav aria-label="Mobile" class="flex-1 overflow-y-auto py-4">
+      <ul class="flex flex-col gap-1">
+        {
+          nav.map((item) => (
+            <li>
+              <a
+                href={item.href}
+                aria-current={isCurrent(item.href) ? 'page' : undefined}
+                class:list={[
+                  'block py-2.5 font-display text-[2rem] font-bold leading-tight tracking-tight transition-colors',
+                  isCurrent(item.href) ? 'text-cobalt' : 'text-ink hover:text-cobalt',
+                ]}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <div class="shrink-0 space-y-3 border-t border-line py-6">
+      <a href="/contact/" class="btn btn-primary w-full">Book a Workshop</a>
+      <a
+        href={whatsappLink()}
+        target="_blank"
+        rel="noopener"
+        class="btn btn-ghost-pink w-full"
+      >
+        <Icon name="whatsapp" size={18} />
+        Chat on WhatsApp
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+  const header = document.getElementById('site-header')!;
+  const bar = document.getElementById('header-bar')!;
+  const toggle = document.getElementById('nav-toggle')!;
+  const close = document.getElementById('nav-close')!;
+  const menu = document.getElementById('mobile-nav')!;
+
+  /* Condense after 80px, per §5. The threshold is checked against a stored
+     state so we only touch the DOM when it actually changes. */
+  let condensed = false;
+  const onScroll = () => {
+    const next = window.scrollY > 80;
+    if (next === condensed) return;
+    condensed = next;
+    header.classList.toggle('bg-off-white/85', next);
+    header.classList.toggle('backdrop-blur-md', next);
+    header.classList.toggle('shadow-[0_1px_0_0_var(--line)]', next);
+    bar.classList.toggle('h-20', !next);
+    bar.classList.toggle('md:h-24', !next);
+    bar.classList.toggle('h-16', next);
+    bar.classList.toggle('md:h-16', next);
+  };
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  /* Overlay menu. Locking body scroll matters here — without it the page
+     behind the overlay scrolls under the user's finger on iOS. */
+  const setOpen = (open: boolean) => {
+    menu.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+    document.documentElement.style.overflow = open ? 'hidden' : '';
+    if (open) menu.querySelector<HTMLAnchorElement>('nav a')?.focus();
+    else toggle.focus();
+  };
+
+  toggle.addEventListener('click', () => setOpen(true));
+  close.addEventListener('click', () => setOpen(false));
+  menu.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).closest('a')) setOpen(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !menu.hidden) setOpen(false);
+  });
+</script>

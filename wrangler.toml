@@ -1,0 +1,25 @@
+# Cloudflare Pages project configuration.
+#
+# Used by `wrangler pages deploy` and by `wrangler pages dev` for testing the
+# Functions in `/functions` locally. Git-connected deploys read the build
+# command and output directory from the Pages dashboard instead — the values
+# there must match the ones below:
+#
+#   Framework preset:        Astro
+#   Build command:           npm run build
+#   Build output directory:  dist
+#   Root directory:          /            (this repo's root)
+#   Node version:            20 or higher (set NODE_VERSION in env vars)
+#
+# NO SECRETS IN THIS FILE. RESEND_API_KEY and friends are set in the Cloudflare
+# dashboard under Settings → Environment variables (encrypted), or locally in
+# .dev.vars, which is gitignored. See README.
+
+name = "the-mess-junk"
+compatibility_date = "2026-07-30"
+pages_build_output_dir = "dist"
+
+# `nodejs_compat` is not required by the current Functions — they use only
+# fetch and the Web Crypto/Streams APIs already present in the Workers runtime.
+# Add it here if a future Function needs a Node built-in.
+compatibility_flags = []

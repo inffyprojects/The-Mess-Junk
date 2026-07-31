@@ -1,0 +1,57 @@
+---
+/**
+ * Washi tape corner — design doc §3.4.4
+ *
+ * "a washi-tape SVG corner accent on gallery/portfolio image cards,
+ * reinforcing 'workshop wall' without literal clip-art scissors-and-glue
+ * icons."
+ *
+ * A translucent strip with torn (zig-zagged) short edges, rotated across the
+ * corner of a card. Translucency is the whole trick — you should be able to
+ * see the card edge through it, the way real washi tape works.
+ */
+
+interface Props {
+  corner?: 'tl' | 'tr' | 'bl' | 'br';
+  color?: string;
+  /** Strip length in px */
+  length?: number;
+  class?: string;
+}
+
+const {
+  corner = 'tl',
+  color = 'var(--acid-yellow)',
+  length = 92,
+  class: className = '',
+} = Astro.props;
+
+/* Each corner gets its own offset + 45° rotation so the strip lies across the
+   card corner, running off the edge the way a real piece of tape does.
+   The offsets are deliberately small: cards clip their overflow, so translating
+   by half the strip leaves only a triangle showing and the tape stops reading
+   as tape. These keep roughly two-thirds of the strip on the card. */
+const PLACEMENT: Record<string, string> = {
+  tl: 'top-0 left-0 -translate-x-[22%] -translate-y-[10%] -rotate-45',
+  tr: 'top-0 right-0 translate-x-[22%] -translate-y-[10%] rotate-45',
+  bl: 'bottom-0 left-0 -translate-x-[22%] translate-y-[10%] rotate-45',
+  br: 'bottom-0 right-0 translate-x-[22%] translate-y-[10%] -rotate-45',
+};
+---
+
+<svg
+  class:list={['pointer-events-none absolute z-10', PLACEMENT[corner], className]}
+  width={length}
+  height={Math.round(length * 0.3)}
+  viewBox="0 0 100 30"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  aria-hidden="true"
+  focusable="false"
+>
+  <!-- Torn short edges (the zig-zags at x≈0 and x≈100), clean long edges -->
+  <path
+    d="M3 2.5 8 5.6 3 8.7l5 3.1-5 3.1 5 3.1-5 3.1 5 3.1-5 3.1 5 3.1-3 2.2h91l-3-2.2 5-3.1-5-3.1 5-3.1-5-3.1 5-3.1-5-3.1 5-3.1-5-3.1 5-3.1-3-2.2H0Z"
+    fill={color}
+    opacity="0.62"></path>
+</svg>

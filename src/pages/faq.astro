@@ -1,0 +1,177 @@
+---
+/**
+ * FAQ — design doc §6.6.
+ *
+ * "Accordion, grouped into 3 short clusters: Booking & Availability / Pricing
+ * & Group Size / What to Expect. Keep each answer 2–3 sentences max."
+ *
+ * Built on native <details>/<summary>: the accordion opens and closes with
+ * zero JavaScript, is keyboard-operable and screen-reader-correct for free,
+ * and its content is in the HTML for search engines. The only scripted
+ * behaviour is the plus-to-cross icon rotation, which is pure CSS.
+ */
+import { getCollection } from 'astro:content';
+import { render } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import CtaBand from '../components/CtaBand.astro';
+import Icon from '../components/Icon.astro';
+import Blob from '../components/motifs/Blob.astro';
+import { whatsappLink } from '../data/site';
+
+const GROUPS = [
+  { id: 'booking', label: 'Booking & availability', blurb: 'Getting a seat, changing one, coming alone.' },
+  { id: 'pricing', label: 'Pricing & group size', blurb: 'What it costs, what is included, and the 20-person minimum.' },
+  { id: 'expect', label: 'What to expect', blurb: 'On the day — what to wear, how long, what you take home.' },
+] as const;
+
+const all = (await getCollection('faq')).sort((a, b) => a.data.order - b.data.order);
+
+/* Render each answer's Markdown body once, up front, so the template below
+   stays declarative. */
+const rendered = await Promise.all(
+  all.map(async (entry) => ({ entry, Content: (await render(entry)).Content })),
+);
+
+const byGroup = GROUPS.map((g) => ({
+  ...g,
+  items: rendered.filter((r) => r.entry.data.group === g.id),
+}));
+
+/* FAQPage structured data. With no blog to carry organic search (§11 open
+   question 2), FAQ rich results are one of the few SEO levers this site has —
+   and the answers are already written, so it costs nothing. */
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: all.map((f) => ({
+    '@type': 'Question',
+    name: f.data.question,
+    acceptedAnswer: { '@type': 'Answer', text: f.body?.trim() ?? '' },
+  })),
+};
+---
+
+<BaseLayout
+  title="FAQ"
+  description="Common questions about booking a workshop at The Mess Junk in Vadodara — pricing, group sizes, what to wear, what you take home, and how to reschedule."
+  whatsappMessage="Hi The Mess Junk! I have a question about your workshops."
+>
+  <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
+
+  <PageHero
+    eyebrow="Questions"
+    title="Everything people ask before they book"
+    underline="ask"
+    lede="Short answers, grouped by what you are actually trying to find out. If yours is not here, message us — we answer quickly."
+    blobVariant={2}
+    blobColor="var(--acid-yellow)"
+  />
+
+  <section class="section-tight">
+    <div class="shell">
+      <div class="grid gap-12 lg:grid-cols-[0.32fr_0.68fr] lg:gap-16">
+        <!-- Cluster index. Sticky on desktop only — on mobile it would eat
+             half the viewport. -->
+        <nav aria-label="FAQ sections" class="reveal lg:sticky lg:top-28 lg:self-start">
+          <p class="eyebrow">Jump to</p>
+          <ul class="mt-4 space-y-1">
+            {
+              byGroup.map((g) => (
+                <li>
+                  <a
+                    href={`#${g.id}`}
+                    class="block rounded-card-sm px-3 py-2.5 text-body-md font-medium text-ink transition-colors duration-200 ease-brand hover:bg-cobalt-05 hover:text-cobalt"
+                  >
+                    {g.label}
+                    <span class="block text-body-sm font-normal text-ink-soft">
+                      {g.items.length} questions
+                    </span>
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+
+          <div class="mt-8 rounded-card border border-line bg-white p-5">
+            <h2 class="font-display text-[1.05rem] font-bold tracking-tight">Still stuck?</h2>
+            <p class="mt-2 text-body-sm text-ink-soft">
+              Ask us directly — it is usually faster than reading.
+            </p>
+            <a
+              href={whatsappLink('Hi The Mess Junk! I had a question that was not on your FAQ:')}
+              target="_blank"
+              rel="noopener"
+              class="btn btn-ghost mt-4 w-full !min-h-[2.75rem] text-body-sm"
+            >
+              <Icon name="whatsapp" size={17} />
+              Ask on WhatsApp
+            </a>
+          </div>
+        </nav>
+
+        <!-- Accordions -->
+        <div class="space-y-12">
+          {
+            byGroup.map((g) => (
+              <section id={g.id} class="scroll-mt-28">
+                <div class="reveal">
+                  <h2 class="text-display-md">{g.label}</h2>
+                  <p class="mt-2 text-body-md text-ink-soft">{g.blurb}</p>
+                </div>
+
+                <div class="mt-6 divide-y divide-line border-y border-line">
+                  {g.items.map(({ entry, Content }, i) => (
+                    <details class="accordion-item group" style={`--reveal-delay:${Math.min(i, 6) * 60}ms`}>
+                      <summary
+                        class:list={[
+                          'flex cursor-pointer list-none items-start justify-between gap-4 py-5',
+                          'font-display text-[1.1rem] font-bold tracking-tight',
+                          'transition-colors duration-200 ease-brand hover:text-cobalt',
+                        ]}
+                      >
+                        {entry.data.question}
+                        <Icon
+                          name="plus"
+                          size={20}
+                          class="accordion-icon mt-0.5 shrink-0 text-cobalt transition-transform duration-300 ease-brand"
+                        />
+                      </summary>
+                      <div class="max-w-prose pb-6 text-body-md text-ink-soft [&_a]:text-cobalt [&_a]:underline [&_a]:underline-offset-4">
+                        <Content />
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              </section>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Minimum-participants clarifier, repeated once here because it is the
+       single most common surprise in enquiries. -->
+  <section class="section-tight">
+    <div class="shell">
+      <div class="reveal relative overflow-hidden rounded-card border border-line bg-white p-7 md:p-9">
+        <Blob variant={3} color="var(--cobalt)" opacity={0.09} class="absolute -right-[6%] -top-[80%] w-[34%]" />
+        <div class="relative z-[2] flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 class="text-display-md">Did not find it?</h2>
+            <p class="mt-2 max-w-prose text-body-md text-ink-soft">
+              Send the question over — and if it is a good one, it ends up on this page.
+            </p>
+          </div>
+          <a href="/contact/" class="btn btn-primary shrink-0">Ask us anything</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <CtaBand
+    title="Ready when you are"
+    lede="Pick a date, send an enquiry, or just say hello. No pressure and no booking engine."
+  />
+</BaseLayout>

@@ -1,0 +1,24 @@
+# build output
+dist/
+.astro/
+
+# dependencies
+node_modules/
+
+# local secrets — never commit. Cloudflare reads these from the dashboard.
+.dev.vars
+.env
+.env.production
+
+# wrangler / cloudflare
+.wrangler/
+
+# editor + OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
+npm-debug.log*

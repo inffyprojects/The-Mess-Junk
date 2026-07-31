@@ -1,0 +1,241 @@
+---
+/**
+ * Workshops — design doc §6.3. (Renamed from the brief's "Services" per §5.)
+ *
+ * "Filter/category tabs at top … Card grid below (BookMyShow-pattern,
+ * Mess-Junk-styled)."
+ *
+ * The filter is one of the three places the site ships JavaScript. Every card
+ * is rendered into the HTML and filtering just toggles `hidden` on the client,
+ * so the page is fully static, fully crawlable, and works with JS off (all
+ * workshops simply show). The active tab is mirrored into the URL so a filtered
+ * view can be linked to — which is how the home page's category strip deep
+ * links in.
+ */
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/PageHero.astro';
+import WorkshopCard from '../../components/WorkshopCard.astro';
+import CtaBand from '../../components/CtaBand.astro';
+import Icon from '../../components/Icon.astro';
+import Blob from '../../components/motifs/Blob.astro';
+import Grain from '../../components/motifs/Grain.astro';
+import { CATEGORIES, CATEGORY_LABELS } from '../../content.config';
+import { site, whatsappLink, formatPrice } from '../../data/site';
+
+const workshops = (await getCollection('workshops', ({ data }) => !data.draft)).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+
+/* Only offer a tab if something actually sits behind it — an empty filter tab
+   is a dead end and reads as broken. */
+const counts = Object.fromEntries(
+  CATEGORIES.map((c) => [c, workshops.filter((w) => w.data.categories.includes(c)).length]),
+) as Record<(typeof CATEGORIES)[number], number>;
+
+const tabs = [
+  { id: 'all', label: 'All workshops', count: workshops.length },
+  ...CATEGORIES.filter((c) => counts[c] > 0).map((c) => ({
+    id: c as string,
+    label: CATEGORY_LABELS[c],
+    count: counts[c],
+  })),
+];
+
+const cheapest = Math.min(...workshops.map((w) => w.data.priceFrom));
+---
+
+<BaseLayout
+  title="Workshops"
+  description={`Art and craft workshops in Vadodara — pottery, painting, resin, block printing, tufting and more. For kids, teens, adults, colleges and corporate teams. From ${formatPrice(cheapest)} per person.`}
+  whatsappMessage="Hi The Mess Junk! I was looking at your workshops page and I'd like to know more."
+>
+  <PageHero
+    eyebrow="What we run"
+    title="Pick a mess to make"
+    underline="mess"
+    lede={`${workshops.length} formats across clay, paint, resin, fabric and paper — for six-year-olds and sixty-year-olds alike. Every session includes materials, an artist running the room, and whatever you make.`}
+  >
+    <p class="flex flex-wrap items-center gap-x-5 gap-y-2 text-body-sm text-ink-soft">
+      <span class="inline-flex items-center gap-1.5">
+        <Icon name="check" size={16} class="text-cobalt" />
+        No experience needed
+      </span>
+      <span class="inline-flex items-center gap-1.5">
+        <Icon name="check" size={16} class="text-cobalt" />
+        All materials included
+      </span>
+      <span class="inline-flex items-center gap-1.5">
+        <Icon name="check" size={16} class="text-cobalt" />
+        From {formatPrice(cheapest)} per person
+      </span>
+    </p>
+  </PageHero>
+
+  <section class="section-tight">
+    <div class="shell">
+      <!-- Filter tabs (§6.3) -->
+      <div class="reveal">
+        <h2 class="sr-only">Filter workshops by group</h2>
+        <div
+          id="filters"
+          role="tablist"
+          aria-label="Workshop categories"
+          class="-mx-[var(--gutter)] flex gap-2 overflow-x-auto px-[var(--gutter)] pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {
+            tabs.map((tab, i) => (
+              <button
+                type="button"
+                role="tab"
+                id={`tab-${tab.id}`}
+                data-filter={tab.id}
+                aria-selected={i === 0 ? 'true' : 'false'}
+                aria-controls="workshop-grid"
+                class:list={[
+                  'inline-flex h-11 shrink-0 items-center gap-2 rounded-pill border px-4 text-body-sm font-medium',
+                  'transition-colors duration-200 ease-brand',
+                  'aria-selected:border-cobalt aria-selected:bg-cobalt aria-selected:text-white',
+                  'border-line bg-white text-ink hover:border-cobalt hover:text-cobalt',
+                ]}
+              >
+                {tab.label}
+                <span class="text-body-sm opacity-60">{tab.count}</span>
+              </button>
+            ))
+          }
+        </div>
+      </div>
+
+      <!-- Card grid -->
+      <ul
+        id="workshop-grid"
+        role="tabpanel"
+        aria-labelledby="tab-all"
+        class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+      >
+        {
+          workshops.map((w, i) => (
+            <li data-categories={w.data.categories.join(' ')} class="flex">
+              <WorkshopCard workshop={w} index={i} />
+            </li>
+          ))
+        }
+      </ul>
+
+      <!-- Shown only when a filter matches nothing. Cannot happen with the
+           current content (empty tabs are not rendered), but the filter is
+           data-driven and this keeps it honest if that changes. -->
+      <p
+        id="no-results"
+        hidden
+        class="mt-10 rounded-card border border-line bg-white p-8 text-center text-body-md text-ink-soft"
+      >
+        Nothing in that group just yet — try another, or
+        <a href="/contact/" class="text-cobalt underline underline-offset-4">ask us for something custom</a>.
+      </p>
+    </div>
+  </section>
+
+  <!-- Custom-quote band (§6.3: the CTA is always a quote, never a checkout) -->
+  <section class="section-tight">
+    <div class="shell">
+      <div class="reveal relative overflow-hidden rounded-card border border-line bg-white p-8 md:p-12">
+        <Blob
+          variant={3}
+          color="var(--pink)"
+          opacity={0.13}
+          class="absolute -right-[8%] -top-[70%] w-[38%]"
+        />
+        <Grain opacity={0.18} />
+
+        <div class="relative z-[2] grid gap-6 md:grid-cols-[1.4fr_auto] md:items-center">
+          <div>
+            <h2 class="text-display-md">Want something that is not on this list?</h2>
+            <p class="mt-3 max-w-prose text-body-md text-ink-soft">
+              Most of what we run started as somebody's request. Tell us the group,
+              the occasion and roughly what you had in mind, and we will build the
+              session and quote it — private bookings need {' '}
+              <strong class="font-semibold text-ink">20 participants minimum</strong>.
+            </p>
+          </div>
+          <div class="flex flex-col gap-3 sm:flex-row md:flex-col">
+            <a href="/contact/?type=Private+%2F+group+workshop" class="btn btn-primary">
+              Request a Custom Quote
+            </a>
+            <a
+              href={whatsappLink(
+                "Hi The Mess Junk! I'd like a custom workshop — here's what I have in mind:",
+              )}
+              target="_blank"
+              rel="noopener"
+              class="btn btn-ghost"
+            >
+              <Icon name="whatsapp" size={18} />
+              Ask on WhatsApp
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <CtaBand
+    title="Found one you like?"
+    lede="Send us the workshop and a date that suits you. We will confirm your seat on WhatsApp, usually within the hour."
+  />
+</BaseLayout>
+
+<script>
+  /* Category filter. Progressive by construction: every card is already in the
+     DOM, so with JS off the page is simply an unfiltered list. */
+  const tabs = document.querySelectorAll<HTMLButtonElement>('#filters [data-filter]');
+  const items = document.querySelectorAll<HTMLLIElement>('#workshop-grid > li');
+  const empty = document.getElementById('no-results') as HTMLElement;
+
+  const apply = (filter: string, pushState: boolean) => {
+    let shown = 0;
+
+    for (const item of items) {
+      const cats = (item.dataset.categories ?? '').split(' ');
+      const match = filter === 'all' || cats.includes(filter);
+      item.hidden = !match;
+
+      if (match) {
+        shown++;
+        /* A card that was display:none when the scroll-reveal observer first
+           ran never intersected, so it is still sitting at opacity 0. Reveal it
+           directly on filter rather than waiting for another intersection —
+           otherwise switching tabs can leave an apparently empty grid. */
+        item.querySelector('.reveal')?.classList.add('is-visible');
+      }
+    }
+
+    for (const tab of tabs) {
+      tab.setAttribute('aria-selected', String(tab.dataset.filter === filter));
+    }
+
+    empty.hidden = shown > 0;
+
+    if (pushState) {
+      /* Keep the filter linkable without adding a history entry per click —
+         replaceState means Back still leaves the page, which is what a visitor
+         expects from a filter control. */
+      const url = new URL(window.location.href);
+      if (filter === 'all') url.searchParams.delete('category');
+      else url.searchParams.set('category', filter);
+      history.replaceState(null, '', url);
+    }
+  };
+
+  for (const tab of tabs) {
+    tab.addEventListener('click', () => apply(tab.dataset.filter!, true));
+  }
+
+  /* Honour ?category= on load, so the home page's category cards deep link
+     straight into a filtered view. */
+  const initial = new URL(window.location.href).searchParams.get('category');
+  if (initial && [...tabs].some((t) => t.dataset.filter === initial)) {
+    apply(initial, false);
+  }
+</script>

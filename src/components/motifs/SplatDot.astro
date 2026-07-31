@@ -1,0 +1,39 @@
+---
+/**
+ * Paint-splat dot — design doc §3.3
+ *
+ * "a small hand-drawn paint-splat SVG dot above the 'j' in 'junk' as the one
+ * custom mark — simple enough that swapping in the real logo later is a
+ * one-line change, not a rebuild."
+ *
+ * Also serves as the favicon on cobalt (see public/favicon.svg).
+ */
+
+interface Props {
+  size?: number;
+  color?: string;
+  class?: string;
+}
+
+const { size = 14, color = 'var(--pink)', class: className = '' } = Astro.props;
+---
+
+<svg
+  class:list={['pointer-events-none', className]}
+  width={size}
+  height={size}
+  viewBox="0 0 32 32"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  aria-hidden="true"
+  focusable="false"
+>
+  <!-- Main blot, off-round with an uneven edge -->
+  <path
+    d="M16.8 3.2c4.6-.6 9.4 2.4 11.3 6.6 1.9 4.2 1 9.6-2 13-3 3.4-8.1 4.8-12.4 3.9-4.3-.9-7.8-4.1-9.2-8.2-1.4-4.1-.7-9.1 2.2-12C9.6 3.6 12.2 3.8 16.8 3.2Z"
+    fill={color}></path>
+  <!-- Three thrown-off droplets, the thing that makes it read as splat -->
+  <circle cx="28.4" cy="22.6" r="2.5" fill={color}></circle>
+  <circle cx="5.2" cy="25.4" r="1.7" fill={color}></circle>
+  <circle cx="24.8" cy="2.6" r="1.5" fill={color}></circle>
+</svg>

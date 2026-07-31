@@ -1,0 +1,82 @@
+---
+/**
+ * Interior page hero.
+ *
+ * Type-led and generous with whitespace, per the Apple influence in §2 — a
+ * single idea, large, with a blob accent behind it and nothing else competing.
+ * The home page has its own full-bleed hero; this is for every other page.
+ */
+import Blob from './motifs/Blob.astro';
+import MarkerUnderline from './motifs/MarkerUnderline.astro';
+
+interface Props {
+  eyebrow: string;
+  /** Split into three parts so one word can carry the marker underline (§3.4.5) */
+  title: string;
+  /** The word within `title` to underline. Must appear in `title` verbatim. */
+  underline?: string;
+  lede?: string;
+  blobVariant?: 1 | 2 | 3 | 4;
+  blobColor?: string;
+}
+
+const {
+  eyebrow,
+  title,
+  underline,
+  lede,
+  blobVariant = 2,
+  blobColor = 'var(--pink)',
+} = Astro.props;
+
+/* Split the headline around the underlined word so the SVG squiggle can be
+   positioned on it. If the word is not found, the headline renders plain
+   rather than breaking. */
+const idx = underline ? title.indexOf(underline) : -1;
+const before = idx >= 0 ? title.slice(0, idx) : title;
+const after = idx >= 0 ? title.slice(idx + underline!.length) : '';
+---
+
+<!-- Asymmetric padding: full section spacing above, much less below, because
+     the following section brings its own top padding. Using `.section` on both
+     stacks two full gaps and leaves a visible void under the headline. -->
+<section
+  class="relative overflow-hidden pb-[clamp(1.5rem,3vw,2.5rem)] pt-[clamp(3rem,7vw,5.5rem)]"
+>
+  <!-- Kept small enough to sit within the section rather than being clipped
+       flat by `overflow-hidden`, which turns a puddle into a slab. -->
+  <Blob
+    variant={blobVariant}
+    color={blobColor}
+    opacity={0.16}
+    class="absolute -right-[14%] -top-[26%] w-[52%] md:-right-[4%] md:w-[32%]"
+  />
+
+  <div class="shell relative">
+    <div class="max-w-3xl">
+      <p class="eyebrow reveal">{eyebrow}</p>
+      <h1 class="reveal mt-3 text-display-xl" style="--reveal-delay:60ms">
+        {before}
+        {
+          idx >= 0 && (
+            <span class="relative inline-block">
+              {underline}
+              <MarkerUnderline />
+            </span>
+          )
+        }
+        {after}
+      </h1>
+      {
+        lede && (
+          <p class="reveal mt-6 max-w-prose text-body-lg text-ink-soft" style="--reveal-delay:120ms">
+            {lede}
+          </p>
+        )
+      }
+      <div class="reveal mt-8" style="--reveal-delay:180ms">
+        <slot />
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,210 @@
+---
+/**
+ * Portfolio / Gallery — design doc §6.4.
+ *
+ * "Masonry grid (Pinterest-pattern), filterable by workshop type once
+ * populated. Launch state: the 'coming soon' card described in §4, styled
+ * on-brand, sitting alone or paired with 2–3 'sneak peek' behind-the-scenes
+ * shots clearly framed as 'the studio, pre-launch' rather than pretending to
+ * be finished work."
+ *
+ * The client has no photos at all yet (questionnaire Q32/Q33), so this page is
+ * entirely the designed launch state: the headline "coming soon" card §4 asks
+ * for, three studio panels explicitly labelled as pre-launch, and the shot list
+ * the real gallery will be built from. No fake work, no grey boxes, and no
+ * empty grid.
+ *
+ * The masonry structure is already here — CSS columns, which is what makes a
+ * Pinterest grid work without JavaScript. Populating it later means adding
+ * items to `pieces` below; the layout does not change.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import ShotPanel from '../components/ShotPanel.astro';
+import CtaBand from '../components/CtaBand.astro';
+import Icon from '../components/Icon.astro';
+import Blob from '../components/motifs/Blob.astro';
+import Grain from '../components/motifs/Grain.astro';
+import Sparkle from '../components/motifs/Sparkle.astro';
+import TapeCorner from '../components/motifs/TapeCorner.astro';
+import type { ShotId } from '../data/shots';
+import { SHOTS } from '../data/shots';
+import { whatsappLink, site } from '../data/site';
+
+/**
+ * The gallery, once it exists. Empty at launch — which is what triggers the
+ * designed empty state below rather than an empty grid.
+ *
+ * TO POPULATE: add `{ shot, caption, category }` entries here and drop the
+ * matching photo into src/assets/photos/. See README.
+ */
+const pieces: { shot: ShotId; caption: string; category: string }[] = [];
+
+/* Behind-the-scenes panels, explicitly framed as pre-launch (§4) */
+const peeks: ShotId[] = ['peek-1', 'peek-2', 'peek-3'];
+
+/* The month the wall starts filling — drives the "coming soon" copy §4 asks
+   for verbatim ("First workshop drops [Month]"). Derived from the earliest
+   scheduled session so it cannot contradict the dates on /contact. */
+const firstSession = new Date('2026-08-08T00:00:00');
+const firstMonth = firstSession.toLocaleDateString('en-IN', { month: 'long' });
+---
+
+<BaseLayout
+  title="Portfolio"
+  description={`The Mess Junk gallery — work from our Vadodara workshops. Our first sessions run from ${firstMonth} ${firstSession.getFullYear()}; this is where the work will live.`}
+  whatsappMessage="Hi The Mess Junk! I'd like to see what people make at your workshops."
+>
+  <PageHero
+    eyebrow="Gallery"
+    title="This wall is about to get messy"
+    underline="messy"
+    lede={`We open in ${firstMonth}. Rather than fill this page with somebody else's work, we have left it for yours — every piece here will have been made at a table in our studio.`}
+    blobVariant={1}
+    blobColor="var(--pink)"
+  />
+
+  {
+    pieces.length > 0 ? (
+      /* ---- Populated state: Pinterest masonry via CSS columns ---------- */
+      <section class="section-tight">
+        <div class="shell">
+          <div class="columns-1 gap-5 sm:columns-2 lg:columns-3 [&>*]:mb-5 [&>*]:break-inside-avoid">
+            {pieces.map((piece, i) => (
+              <figure class="card card-interactive relative">
+                <TapeCorner corner={i % 2 === 0 ? 'tl' : 'tr'} />
+                <ShotPanel shot={piece.shot} index={i} class="!rounded-none" />
+                <figcaption class="p-4">
+                  <p class="text-body-sm font-medium text-ink">{piece.caption}</p>
+                  <p class="mt-1 text-body-sm text-ink-soft">{piece.category}</p>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+      </section>
+    ) : (
+      /* ---- Launch state (§4) ------------------------------------------ */
+      <section class="section-tight">
+        <div class="shell">
+          <!-- The "coming soon" card §4 specifies, on-brand rather than a
+               grey placeholder box. -->
+          <div class="reveal relative overflow-hidden rounded-card bg-cobalt p-8 text-white md:p-14">
+            <Blob variant={2} color="var(--pink)" opacity={0.3} drift class="absolute -left-[10%] -top-[60%] w-[46%]" />
+            <Blob variant={4} color="var(--acid-yellow)" opacity={0.18} drift class="absolute -bottom-[70%] -right-[6%] w-[42%]" />
+            <Grain opacity={0.32} />
+
+            <div class="relative z-[2] max-w-2xl">
+              <p class="inline-flex items-center gap-2 text-label uppercase tracking-[0.09em] text-white/75">
+                <Sparkle size={14} />
+                Opening {firstMonth} {firstSession.getFullYear()}
+              </p>
+              <h2 class="mt-5 text-display-lg text-white">
+                First workshop drops {firstMonth} — this wall is about to get messy
+              </h2>
+              <p class="mt-5 max-w-prose text-body-lg text-white/80">
+                Everything on this page will come from our own sessions: the
+                good pieces, the wonky first attempts, and the tables afterwards.
+                We would rather show you nothing than show you stock photos of
+                somebody else's studio.
+              </p>
+              <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+                <a href="/contact/" class="btn btn-on-cobalt">Be in the first session</a>
+                <a
+                  href={site.social.instagram}
+                  target="_blank"
+                  rel="noopener"
+                  class="btn btn-outline-white"
+                >
+                  <Icon name="instagram" size={18} />
+                  Follow along on Instagram
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sneak peeks, clearly framed as pre-launch (§4) -->
+          <div class="mt-14">
+            <div class="reveal flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p class="eyebrow">The studio, pre-launch</p>
+                <h2 class="mt-3 text-display-md">Where it is all going to happen</h2>
+              </div>
+              <p class="max-w-sm text-body-sm text-ink-soft">
+                Not finished work — just the room, the shelves and the tools,
+                photographed before anybody has made a mess of them.
+              </p>
+            </div>
+
+            <ul class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {peeks.map((shot, i) => (
+                <li class="reveal" style={`--reveal-delay:${i * 70}ms`}>
+                  <figure class="card card-interactive relative h-full">
+                    <TapeCorner corner={i % 2 === 0 ? 'tl' : 'tr'} color={i === 1 ? 'var(--pink)' : 'var(--acid-yellow)'} />
+                    <ShotPanel shot={shot} index={i} class="!rounded-none" />
+                    <figcaption class="p-4">
+                      <p class="font-scribble text-scribble leading-tight text-ink">
+                        {SHOTS[shot].brief.split(':')[1]?.trim() ?? SHOTS[shot].brief}
+                      </p>
+                      <p class="mt-1.5 text-body-sm text-ink-soft">Coming {firstMonth}</p>
+                    </figcaption>
+                  </figure>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <!-- What will actually be here — sets expectations honestly and gives the
+       page substance without inventing content. -->
+  <section class="section">
+    <div class="shell">
+      <div class="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
+        <div class="reveal">
+          <p class="eyebrow">What goes up here</p>
+          <h2 class="mt-3 text-display-lg">Real work, from real sessions</h2>
+          <p class="mt-4 max-w-prose text-body-md text-ink-soft">
+            Once workshops are running, this becomes a browsable wall — filterable
+            by craft and by group, the way you would browse a Pinterest board.
+          </p>
+          <a
+            href={whatsappLink(
+              "Hi The Mess Junk! I'd like to be in one of your first workshops.",
+            )}
+            target="_blank"
+            rel="noopener"
+            class="btn btn-ghost mt-6"
+          >
+            <Icon name="whatsapp" size={18} />
+            Get on the list
+          </a>
+        </div>
+
+        <ul class="reveal grid gap-5 sm:grid-cols-2" style="--reveal-delay:80ms">
+          {
+            [
+              { icon: 'palette' as const, title: 'Finished pieces', body: 'Pots, canvases, rugs, prints — photographed properly, credited to whoever made them.' },
+              { icon: 'users' as const, title: 'Sessions in progress', body: 'The table mid-workshop, which is honestly the better picture.' },
+              { icon: 'gift' as const, title: 'Private bookings', body: 'Birthdays, team days and college pop-ups, shared with permission.' },
+              { icon: 'calendar' as const, title: 'Seasonal runs', body: 'Diwali, Rakhi and December sessions, gathered by year.' },
+            ].map((item) => (
+              <li class="card p-6">
+                <Icon name={item.icon} size={22} class="text-cobalt" />
+                <h3 class="mt-4 font-display text-[1.1rem] font-bold tracking-tight">{item.title}</h3>
+                <p class="mt-2 text-body-sm font-normal text-ink-soft">{item.body}</p>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <CtaBand
+    title="Want to be in the first batch?"
+    lede="Our opening sessions are small on purpose. Message us and we will hold you a place."
+  />
+</BaseLayout>

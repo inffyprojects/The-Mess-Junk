@@ -1,0 +1,479 @@
+/* ==========================================================================
+   The Mess Junk — global tokens & base layer
+   Token values are copied verbatim from the design document §3.1.
+   Do not edit brand-core values without client sign-off.
+   ========================================================================== */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Brand core — client-specified, do not alter */
+    --cobalt: #2a2ecf;
+    --pink: #e86fc4;
+    --white: #ffffff;
+    --off-white: #f8f5f0;
+
+    /* Derived neutrals — for text/borders, keeps everything legible */
+    --ink: #17173a; /* body text, headlines on light bg — NOT pure black */
+    --ink-soft: #5b5a78; /* secondary text, captions */
+    --line: #e7e2d8; /* dividers, card borders, on off-white */
+
+    /* Tints — for section backgrounds, badges, hover states */
+    --cobalt-10: #e9e9fb;
+    --cobalt-05: #f4f4fd;
+    --pink-10: #fce7f5;
+    --pink-05: #fdf3fa;
+
+    /* Proposed third accent — see BUILD_NOTES.md, open question 3 */
+    --acid-yellow: #f5d949;
+
+    /* Semantic (system use only, never brand-facing) */
+    --success: #2e9e6b;
+    --error: #d6455b;
+
+    /* Layout rhythm */
+    --shell: 78rem;
+    --gutter: clamp(1.25rem, 5vw, 3rem);
+
+    /* Grain texture (§3.4) — an SVG fractal-noise turbulence filter as a data
+       URI. Defined once here and referenced by every `.photo` and `.grain`
+       surface, so the whole site shares one texture rather than each section
+       inventing its own. Zero network requests, ~600 bytes, tiles seamlessly
+       via stitchTiles. */
+    --grain-url: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.42'/%3E%3C/svg%3E");
+  }
+
+  * {
+    border-color: var(--line);
+  }
+
+  /* The `hidden` attribute must actually hide things.
+     The browser's own `[hidden] { display: none }` is a user-agent rule, so ANY
+     author-level display utility beats it — a `<li class="flex">` stays visible
+     even with `hidden` set. The workshop filter and the mobile nav both toggle
+     `.hidden` on elements that carry display classes, so without this they
+     silently do nothing. */
+  [hidden] {
+    display: none !important;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    /* Sticky header is 64px condensed — keep anchor targets clear of it */
+    scroll-padding-top: 6rem;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--off-white);
+    color: var(--ink);
+    font-family: theme('fontFamily.body');
+    font-size: 1rem;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* Blobs bleed past section edges by design; never let that scroll the page */
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: theme('fontFamily.display');
+    color: var(--ink);
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--cobalt);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  /* Selection picks up the brand rather than the OS default blue */
+  ::selection {
+    background: var(--pink-10);
+    color: var(--ink);
+  }
+}
+
+@layer components {
+  /* ---- Layout shell ---------------------------------------------------- */
+  .shell {
+    width: 100%;
+    max-width: var(--shell);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  /* Vertical rhythm for full-width page sections */
+  .section {
+    padding-block: clamp(3.5rem, 8vw, 6.5rem);
+    position: relative;
+  }
+
+  .section-tight {
+    padding-block: clamp(2.5rem, 5vw, 4rem);
+    position: relative;
+  }
+
+  /* ---- Buttons (§7) ---------------------------------------------------- */
+  /* Primary: cobalt fill, pill radius, subtle glossy top highlight (the Y2K
+     "chrome button" cue, kept to a 12% white wash so it reads as sheen and not
+     as a gradient). Lifts 2–3% on hover. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 3rem; /* ≥48px touch target (§10) */
+    padding: 0.75rem 1.6rem;
+    border-radius: theme('borderRadius.pill');
+    font-family: theme('fontFamily.body');
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+    cursor: pointer;
+    transition:
+      transform 250ms theme('transitionTimingFunction.brand'),
+      box-shadow 250ms theme('transitionTimingFunction.brand'),
+      background-color 250ms theme('transitionTimingFunction.brand'),
+      color 250ms theme('transitionTimingFunction.brand'),
+      border-color 250ms theme('transitionTimingFunction.brand');
+  }
+
+  .btn-primary {
+    background-color: var(--cobalt);
+    background-image: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.22),
+      rgba(255, 255, 255, 0) 46%
+    );
+    color: var(--white);
+    border: 1.5px solid var(--cobalt);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px) scale(1.025);
+    box-shadow: theme('boxShadow.lift');
+  }
+
+  .btn-primary:active {
+    transform: translateY(0) scale(0.99);
+  }
+
+  /* Ghost: 1.5px border, transparent fill, fills solid on hover */
+  .btn-ghost {
+    background-color: transparent;
+    color: var(--ink);
+    border: 1.5px solid var(--cobalt);
+  }
+
+  .btn-ghost:hover {
+    background-color: var(--cobalt);
+    color: var(--white);
+    transform: translateY(-2px) scale(1.025);
+    box-shadow: theme('boxShadow.lift');
+  }
+
+  /* Pink-accented ghost — the hero's "Chat on WhatsApp" secondary (§6.1) */
+  .btn-ghost-pink {
+    background-color: transparent;
+    color: var(--ink);
+    border: 1.5px solid var(--pink);
+  }
+
+  .btn-ghost-pink:hover {
+    background-color: var(--pink);
+    color: var(--ink); /* ink on pink, never white — pink fails small-text contrast (§3.1) */
+    transform: translateY(-2px) scale(1.025);
+    box-shadow: theme('boxShadow.lift');
+  }
+
+  /* On the cobalt CTA band, where the page is already cobalt */
+  .btn-on-cobalt {
+    background-color: var(--white);
+    color: var(--cobalt);
+    border: 1.5px solid var(--white);
+  }
+
+  .btn-on-cobalt:hover {
+    transform: translateY(-2px) scale(1.025);
+    box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.5);
+  }
+
+  .btn-outline-white {
+    background-color: transparent;
+    color: var(--white);
+    border: 1.5px solid rgba(255, 255, 255, 0.55);
+  }
+
+  .btn-outline-white:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: var(--white);
+    transform: translateY(-2px) scale(1.025);
+  }
+
+  /* ---- Card (§7) ------------------------------------------------------- */
+  /* White surface on off-white page, 1px line border, FLAT at rest —
+     shadow appears only on hover. */
+  .card {
+    background-color: var(--white);
+    border: 1px solid var(--line);
+    border-radius: theme('borderRadius.card');
+    overflow: hidden;
+    transition:
+      box-shadow 400ms theme('transitionTimingFunction.brand'),
+      transform 400ms theme('transitionTimingFunction.brand'),
+      border-color 400ms theme('transitionTimingFunction.brand');
+  }
+
+  .card-interactive:hover {
+    box-shadow: theme('boxShadow.lift');
+    transform: translateY(-4px);
+    border-color: var(--cobalt-10);
+  }
+
+  /* ---- Badges / chips (§7) --------------------------------------------- */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: theme('borderRadius.pill');
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--ink);
+    background-color: var(--pink-10);
+    white-space: nowrap;
+  }
+
+  .chip-cobalt {
+    background-color: var(--cobalt-10);
+  }
+
+  .chip-yellow {
+    background-color: var(--acid-yellow);
+  }
+
+  .chip-outline {
+    background-color: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+  }
+
+  /* ---- Eyebrow label (§3.2 `label` token) ------------------------------ */
+  .eyebrow {
+    display: inline-block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--cobalt);
+  }
+
+  /* ---- Form fields (§7) ------------------------------------------------ */
+  .field {
+    width: 100%;
+    min-height: 3rem; /* ≥48px (§10) */
+    padding: 0.75rem 1rem;
+    background-color: var(--off-white);
+    border: 1px solid var(--line);
+    border-radius: theme('borderRadius.card-sm');
+    color: var(--ink);
+    font-family: theme('fontFamily.body');
+    font-size: 1rem;
+    transition:
+      border-color 200ms theme('transitionTimingFunction.brand'),
+      box-shadow 200ms theme('transitionTimingFunction.brand');
+  }
+
+  .field::placeholder {
+    color: var(--ink-soft);
+    opacity: 0.75;
+  }
+
+  .field:focus {
+    outline: none;
+    border-color: var(--cobalt);
+    box-shadow: theme('boxShadow.focus');
+  }
+
+  .field:user-invalid {
+    border-color: var(--error);
+  }
+
+  .field-label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  /* Native select needs its own arrow once appearance is reset */
+  select.field {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235B5A78' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    padding-right: 2.75rem;
+  }
+
+  /* ==== Imagery treatment (§4) ==========================================
+     The single most important rule in the doc: mixed stock photography has to
+     read as one art-directed brand. Three stacked layers do that job —
+
+       1. `.photo` clips to a fixed ratio + brand corner radius
+       2. `.photo::before` lays a duotone wash over the image (cobalt in the
+          shadows via multiply, warm off-white in the highlights via soft-light)
+       3. `.photo::after` lays the shared grain texture over everything
+
+     Keeping the duotone in CSS rather than baking it into the file is what
+     makes §8's "duotone-to-full-colour crossfade on hover" possible: the
+     overlay simply fades to 0 and the real photo bursts through.
+     ==================================================================== */
+  .photo {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    border-radius: theme('borderRadius.card');
+    background-color: var(--cobalt-05);
+    isolation: isolate;
+  }
+
+  .photo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 600ms theme('transitionTimingFunction.brand');
+  }
+
+  .photo::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(248, 245, 240, 0.16), rgba(248, 245, 240, 0.05)),
+      linear-gradient(200deg, rgba(42, 46, 207, 0.42), rgba(42, 46, 207, 0.2));
+    mix-blend-mode: multiply;
+    opacity: 1;
+    transition: opacity 600ms theme('transitionTimingFunction.brand');
+  }
+
+  /* Warm highlight lift, so the duotone doesn't just read as "blue filter" */
+  .photo::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    background-image: var(--grain-url);
+    background-size: 180px 180px;
+    opacity: 0.32; /* the SVG's own alpha lands this at ~3–4% effective (§3.4) */
+  }
+
+  /* §8 — colour bursts through on interaction */
+  .photo-reveal:hover img,
+  .photo-reveal:focus-within img {
+    transform: scale(1.04);
+  }
+
+  .photo-reveal:hover::before,
+  .photo-reveal:focus-within::before {
+    opacity: 0;
+  }
+
+  /* A lighter duotone for hero imagery, which sits under white type and needs
+     to stay dark enough for contrast but not turn into a solid blue slab. */
+  .photo-hero::before {
+    background:
+      linear-gradient(180deg, rgba(23, 23, 58, 0.1), rgba(23, 23, 58, 0.55)),
+      linear-gradient(200deg, rgba(42, 46, 207, 0.5), rgba(42, 46, 207, 0.28));
+    mix-blend-mode: normal;
+  }
+
+  /* Standalone grain, for colour blocks that have no photo under them (§3.4) */
+  .grain::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background-image: var(--grain-url);
+    background-size: 180px 180px;
+    opacity: 0.28;
+  }
+
+  /* ---- Accordion (§6.6) ------------------------------------------------ */
+  .accordion-item[open] .accordion-icon {
+    transform: rotate(45deg);
+  }
+
+  .accordion-item summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .accordion-item summary::marker {
+    content: '';
+  }
+}
+
+@layer utilities {
+  /* Scroll-reveal (§8): 400ms, one easing, 60–80ms stagger inside a grid.
+     Elements start hidden ONLY when JS is available to reveal them — the
+     `.js-reveal` class is added to <html> by an inline script, so a no-JS
+     visitor gets fully visible content instead of a blank page. */
+  .js-reveal .reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition:
+      opacity 400ms theme('transitionTimingFunction.brand'),
+      transform 400ms theme('transitionTimingFunction.brand');
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+
+  .js-reveal .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  .text-shadow-hero {
+    text-shadow: 0 2px 24px rgba(23, 23, 58, 0.35);
+  }
+}
+
+/* §8 / §10 — honour the OS "reduce motion" setting everywhere, including the
+   drifting blobs and the one-off WhatsApp pulse. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .js-reveal .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

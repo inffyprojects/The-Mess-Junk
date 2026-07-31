@@ -1,0 +1,518 @@
+---
+/**
+ * Contact — design doc §6.7.
+ *
+ * "Split layout: left = enquiry form (name, phone, event type, preferred date,
+ * guest count, budget, message — exactly per brief §9), right = contact
+ * details, WhatsApp button, and an embedded Google Map."
+ *
+ * Availability checker (§6.7 / brief Q40): a date picker listing upcoming
+ * sessions with seats-left status, sourced from a static content file. Not a
+ * live booking engine — see BUILD_NOTES.md, open question 5. Selecting a date
+ * pre-fills the enquiry form and the WhatsApp message.
+ *
+ * The map is a plain iframe embed: no Maps JS SDK and no API key, so there is
+ * no billing account attached to this site.
+ */
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import Icon from '../components/Icon.astro';
+import Blob from '../components/motifs/Blob.astro';
+import Grain from '../components/motifs/Grain.astro';
+import Sparkle from '../components/motifs/Sparkle.astro';
+import { site, whatsappLink, formatDate, formatPrice } from '../data/site';
+
+const workshops = (await getCollection('workshops', ({ data }) => !data.draft)).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+
+/* Upcoming sessions only. Filtering at build time means a stale date cannot
+   linger on the page — but it also means the list shrinks between deploys, so
+   the README tells the client to top this file up. A month with nothing left
+   in it renders the honest empty state further down rather than an empty grid. */
+const today = new Date().toISOString().slice(0, 10);
+const dates = (await getCollection('dates'))
+  .filter((d) => d.data.date >= today)
+  .sort((a, b) => a.data.date.localeCompare(b.data.date));
+
+/* Event types — the brief's "event type" field. Mirrors the pricing tiers and
+   the workshop list so an enquiry arrives already categorised. */
+const eventTypes = [
+  'Public workshop',
+  'Private / group workshop',
+  'Corporate / college workshop',
+  'Kids workshop',
+  'Birthday or celebration',
+  'Seasonal / festive workshop',
+  'Something else',
+];
+
+const budgets = [
+  'Under ₹10,000',
+  '₹10,000 – ₹25,000',
+  '₹25,000 – ₹50,000',
+  '₹50,000+',
+  'Not sure yet',
+];
+
+/* Vadodara, centred on the city. A place-name query embed needs no API key and
+   no billing account, unlike the Maps JavaScript SDK. Swap the `q=` value for
+   the exact studio address once the client confirms it. */
+const mapSrc =
+  'https://www.google.com/maps?q=' + encodeURIComponent('Vadodara, Gujarat, India') + '&output=embed';
+---
+
+<BaseLayout
+  title="Contact"
+  description={`Book a workshop at The Mess Junk, Vadodara. Check upcoming dates and seats left, send an enquiry, or message us on WhatsApp at +91 ${site.primaryPhone}.`}
+  whatsappMessage="Hi The Mess Junk! I'd like to book a workshop."
+>
+  <PageHero
+    eyebrow="Get in touch"
+    title="Let's get you a seat"
+    underline="seat"
+    lede="Pick a date below, send the form, or just message us. Whichever you choose, a person reads it — usually within the hour."
+    blobVariant={4}
+    blobColor="var(--pink)"
+  />
+
+  <!-- ===================================================================
+       AVAILABILITY CHECKER (§6.7)
+       Static date list + seats-left status. Selecting a date pre-fills the
+       enquiry form below and the WhatsApp deep link.
+       =================================================================== -->
+  <section class="section-tight" id="availability">
+    <div class="shell">
+      <div class="reveal flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p class="eyebrow">Upcoming sessions</p>
+          <h2 class="mt-3 text-display-lg">Check a date</h2>
+          <p class="mt-3 max-w-prose text-body-md text-ink-soft">
+            Pick one and it carries straight into your enquiry, so you do not
+            have to explain which session you meant.
+          </p>
+        </div>
+        <p class="text-body-sm text-ink-soft">
+          Seats update as bookings come in — confirm on WhatsApp to hold yours.
+        </p>
+      </div>
+
+      {
+        dates.length > 0 ? (
+          <ul class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {dates.map((d, i) => {
+              const s = d.data;
+              const soldOut = s.seatsLeft === 0;
+              /* Written as `threshold >= seatsLeft` rather than
+                 `seatsLeft <= threshold`: inside a JSX expression the Astro
+                 compiler reads `<` as the start of a tag and fails to build. */
+              const nearlyFull = !soldOut && Math.max(2, Math.ceil(s.seatsTotal * 0.25)) >= s.seatsLeft;
+
+              return (
+                <li class="reveal flex" style={`--reveal-delay:${Math.min(i, 6) * 70}ms`}>
+                  <button
+                    type="button"
+                    class:list={[
+                      /* h-full so a card whose status label wraps onto two
+                         lines does not leave its row-mates short. */
+                      'card group flex h-full w-full flex-col p-5 text-left transition-all duration-300 ease-brand',
+                      'data-[selected=true]:!border-cobalt data-[selected=true]:ring-2 data-[selected=true]:ring-cobalt-10',
+                      soldOut
+                        ? 'cursor-not-allowed opacity-55'
+                        : 'hover:-translate-y-1 hover:shadow-lift',
+                    ]}
+                    data-date={s.date}
+                    data-workshop={s.workshop}
+                    data-label={formatDate(s.date, { weekday: 'long', month: 'long' })}
+                    data-selected="false"
+                    disabled={soldOut}
+                    aria-pressed="false"
+                  >
+                    <div class="flex items-start justify-between gap-3">
+                      <div>
+                        <p class="font-display text-[1.25rem] font-bold leading-none tracking-tight text-cobalt">
+                          {formatDate(s.date)}
+                        </p>
+                        <p class="mt-1.5 text-body-sm text-ink-soft">{s.time}</p>
+                      </div>
+                      {soldOut ? (
+                        <span class="chip !bg-cobalt-10 !text-ink-soft">Full</span>
+                      ) : nearlyFull ? (
+                        <span class="chip chip-yellow">
+                          <Sparkle size={12} color="var(--ink)" />
+                          {s.seatsLeft} left
+                        </span>
+                      ) : (
+                        <span class="chip">{s.seatsLeft} seats</span>
+                      )}
+                    </div>
+
+                    <p class="mt-4 border-t border-line pt-4 text-body-sm font-semibold text-ink">
+                      {s.workshop}
+                    </p>
+
+                    <p class="mt-auto flex items-center justify-between gap-3 pt-2 text-body-sm text-ink-soft">
+                      {s.priceFrom && <span>From {formatPrice(s.priceFrom)}</span>}
+                      <span
+                        class:list={[
+                          'inline-flex items-center gap-1 font-medium',
+                          soldOut ? 'text-ink-soft' : 'text-cobalt',
+                        ]}
+                      >
+                        {soldOut ? 'Join the waitlist below' : 'Select this date'}
+                        {!soldOut && <Icon name="arrow-right" size={15} />}
+                      </span>
+                    </p>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          /* Honest empty state — the dates file has run dry rather than the
+             studio having nothing on. Never render an empty grid (§4). */
+          <div class="reveal mt-8 relative overflow-hidden rounded-card border border-line bg-white p-8 text-center md:p-12">
+            <Blob variant={2} color="var(--pink)" opacity={0.12} class="absolute -right-[10%] -top-[60%] w-[40%]" />
+            <Grain opacity={0.18} />
+            <div class="relative z-[2]">
+              <h3 class="text-display-md">The next dates are being set</h3>
+              <p class="mx-auto mt-3 max-w-prose text-body-md text-ink-soft">
+                We are between schedules right now. Message us and we will tell you
+                what is coming up — or send an enquiry below and we will build a
+                session around your group.
+              </p>
+            </div>
+          </div>
+        )
+      }
+
+      <!-- Live region announcing the current selection to screen readers -->
+      <p
+        id="date-selection"
+        role="status"
+        aria-live="polite"
+        class="mt-6 hidden items-center gap-2 rounded-card bg-cobalt-05 px-5 py-4 text-body-md text-ink"
+      >
+      </p>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       ENQUIRY FORM + CONTACT DETAILS (§6.7 split layout)
+       =================================================================== -->
+  <section class="section" id="enquire">
+    <div class="shell">
+      <div class="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-14">
+        <!-- Left: enquiry form. Fields exactly per brief §9. -->
+        <div class="reveal">
+          <p class="eyebrow">Enquiry</p>
+          <h2 class="mt-3 text-display-lg">Tell us what you are planning</h2>
+          <p class="mt-3 max-w-prose text-body-md text-ink-soft">
+            The more you give us here, the more useful our reply is. Only your
+            name and a phone number are required.
+          </p>
+
+          <form id="enquiry-form" class="mt-8 grid gap-5 sm:grid-cols-2" novalidate>
+            <div class="sm:col-span-2">
+              <label class="field-label" for="name">Your name <span class="text-error">*</span></label>
+              <input id="name" name="name" type="text" required autocomplete="name" class="field" />
+            </div>
+
+            <div>
+              <label class="field-label" for="phone">Phone / WhatsApp <span class="text-error">*</span></label>
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                required
+                inputmode="tel"
+                autocomplete="tel"
+                placeholder="98XXXXXXXX"
+                class="field"
+              />
+            </div>
+
+            <div>
+              <label class="field-label" for="email">Email <span class="text-ink-soft">(optional)</span></label>
+              <input id="email" name="email" type="email" autocomplete="email" class="field" />
+            </div>
+
+            <div>
+              <label class="field-label" for="eventType">Event type</label>
+              <select id="eventType" name="eventType" class="field">
+                <option value="">Choose one…</option>
+                {eventTypes.map((t) => <option value={t}>{t}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label class="field-label" for="workshop">Workshop</label>
+              <select id="workshop" name="workshop" class="field">
+                <option value="">Not sure yet — help me pick</option>
+                {workshops.map((w) => <option value={w.data.title}>{w.data.title}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label class="field-label" for="date">Preferred date</label>
+              <input id="date" name="date" type="date" min={today} class="field" />
+            </div>
+
+            <div>
+              <label class="field-label" for="guests">Number of guests</label>
+              <input
+                id="guests"
+                name="guests"
+                type="number"
+                min="1"
+                inputmode="numeric"
+                placeholder="e.g. 25"
+                class="field"
+              />
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="field-label" for="budget">Rough budget</label>
+              <select id="budget" name="budget" class="field">
+                <option value="">Prefer not to say</option>
+                {budgets.map((b) => <option value={b}>{b}</option>)}
+              </select>
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="field-label" for="message">Anything else we should know?</label>
+              <textarea id="message" name="message" rows="4" class="field resize-y"></textarea>
+            </div>
+
+            <!--
+              Honeypot. A real visitor never sees or fills this; bots fill every
+              field they find. Cheaper and less hostile than a CAPTCHA, and it
+              keeps the form free of third-party scripts.
+            -->
+            <div class="hidden" aria-hidden="true">
+              <label for="company">Company</label>
+              <input id="company" name="company" type="text" tabindex="-1" autocomplete="off" />
+            </div>
+
+            <div class="sm:col-span-2">
+              <button type="submit" class="btn btn-primary w-full sm:w-auto">
+                <Icon name="send" size={18} />
+                Send enquiry
+              </button>
+              <p
+                id="form-status"
+                role="status"
+                aria-live="polite"
+                class="mt-4 text-body-md empty:mt-0"
+              >
+              </p>
+            </div>
+          </form>
+        </div>
+
+        <!-- Right: contact details, WhatsApp, map -->
+        <aside class="reveal" style="--reveal-delay:80ms">
+          <div class="card relative overflow-hidden p-7">
+            <Blob variant={1} color="var(--cobalt)" opacity={0.08} class="absolute -right-[20%] -top-[40%] w-[70%]" />
+            <div class="relative z-[2]">
+              <h2 class="font-display text-[1.35rem] font-bold tracking-tight">
+                Or skip the form
+              </h2>
+              <p class="mt-2 text-body-md text-ink-soft">
+                WhatsApp is genuinely the fastest way to reach us.
+              </p>
+
+              <a
+                href={whatsappLink("Hi The Mess Junk! I'd like to book a workshop.")}
+                target="_blank"
+                rel="noopener"
+                id="whatsapp-cta"
+                class="btn btn-primary mt-5 w-full"
+              >
+                <Icon name="whatsapp" size={19} />
+                Chat on WhatsApp
+              </a>
+
+              <ul class="mt-7 space-y-4 border-t border-line pt-6 text-body-md">
+                <li class="flex gap-3">
+                  <Icon name="phone" size={19} class="mt-0.5 shrink-0 text-cobalt" />
+                  <span>
+                    <a href={`tel:+91${site.primaryPhone}`} class="font-medium hover:text-cobalt">
+                      +91 {site.primaryPhone}
+                    </a>
+                    <span class="block text-body-sm text-ink-soft">
+                      Also on{' '}
+                      {site.otherPhones.map((n, i) => (
+                        <>
+                          {i > 0 && ' · '}
+                          <a href={`tel:+91${n}`} class="hover:text-cobalt">+91 {n}</a>
+                        </>
+                      ))}
+                    </span>
+                  </span>
+                </li>
+                <li class="flex gap-3">
+                  <Icon name="mail" size={19} class="mt-0.5 shrink-0 text-cobalt" />
+                  <a href={`mailto:${site.email}`} class="hover:text-cobalt">{site.email}</a>
+                </li>
+                <li class="flex gap-3">
+                  <Icon name="map-pin" size={19} class="mt-0.5 shrink-0 text-cobalt" />
+                  <span>{site.addressLine}</span>
+                </li>
+                <li class="flex gap-3">
+                  <Icon name="clock" size={19} class="mt-0.5 shrink-0 text-cobalt" />
+                  <span class="text-ink-soft">{site.hours}</span>
+                </li>
+                <li class="flex gap-3">
+                  <Icon name="instagram" size={19} class="mt-0.5 shrink-0 text-cobalt" />
+                  <a href={site.social.instagram} target="_blank" rel="noopener" class="hover:text-cobalt">
+                    @themessjunk
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Google Maps: plain iframe embed, no API key, no billing (§ tech brief) -->
+          <div class="mt-6 overflow-hidden rounded-card border border-line">
+            <iframe
+              src={mapSrc}
+              title={`Map showing ${site.name}'s location in ${site.city}, ${site.region}`}
+              width="100%"
+              height="320"
+              style="border:0; display:block;"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+              allowfullscreen></iframe>
+          </div>
+          <p class="mt-3 text-body-sm text-ink-soft">
+            We send exact directions along with your booking confirmation.
+          </p>
+        </aside>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  /* ------------------------------------------------------------------
+     Availability checker → enquiry form wiring (§6.7)
+     ------------------------------------------------------------------ */
+  const form = document.getElementById('enquiry-form') as HTMLFormElement | null;
+  const status = document.getElementById('form-status');
+  const selectionNote = document.getElementById('date-selection');
+  const whatsappCta = document.getElementById('whatsapp-cta') as HTMLAnchorElement | null;
+  const WHATSAPP_BASE = whatsappCta?.href.split('?')[0] ?? '';
+
+  const dateField = document.getElementById('date') as HTMLInputElement | null;
+  const workshopField = document.getElementById('workshop') as HTMLSelectElement | null;
+  const typeField = document.getElementById('eventType') as HTMLSelectElement | null;
+
+  const dateButtons = document.querySelectorAll<HTMLButtonElement>('[data-date]');
+
+  /** Selects an option only if it actually exists, so a renamed workshop in
+      the dates file cannot silently blank the field. */
+  const trySelect = (el: HTMLSelectElement | null, value: string) => {
+    if (!el) return false;
+    const match = [...el.options].find((o) => o.value === value);
+    if (!match) return false;
+    el.value = value;
+    return true;
+  };
+
+  for (const button of dateButtons) {
+    button.addEventListener('click', () => {
+      const { date, workshop, label } = button.dataset;
+      if (!date) return;
+
+      for (const other of dateButtons) {
+        const isThis = other === button;
+        other.dataset.selected = String(isThis);
+        other.setAttribute('aria-pressed', String(isThis));
+      }
+
+      if (dateField) dateField.value = date;
+      if (workshop) trySelect(workshopField, workshop);
+
+      /* Carry the date into the WhatsApp deep link too, so whichever route the
+         visitor takes from here, we know which session they mean. */
+      if (whatsappCta && WHATSAPP_BASE) {
+        whatsappCta.href = `${WHATSAPP_BASE}?text=${encodeURIComponent(
+          `Hi The Mess Junk! I'd like to book ${workshop ?? 'a workshop'} on ${label ?? date}. Is there still a seat?`,
+        )}`;
+      }
+
+      if (selectionNote) {
+        selectionNote.classList.remove('hidden');
+        selectionNote.classList.add('flex');
+        selectionNote.textContent = `Selected: ${workshop ?? 'Workshop'} on ${label ?? date}. Your enquiry below has been filled in.`;
+      }
+
+      document.getElementById('enquire')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  /* ------------------------------------------------------------------
+     Deep links from elsewhere on the site — workshop cards pass ?workshop=,
+     pricing tiers pass ?type=.
+     ------------------------------------------------------------------ */
+  const params = new URL(window.location.href).searchParams;
+  const wParam = params.get('workshop');
+  const tParam = params.get('type');
+  if (wParam) trySelect(workshopField, wParam);
+  if (tParam) trySelect(typeField, tParam);
+
+  /* ------------------------------------------------------------------
+     Submit → Cloudflare Pages Function
+     ------------------------------------------------------------------ */
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!status) return;
+
+    /* Let the browser do the validating, then surface its message rather than
+       inventing our own copy for each field. */
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      status.className = 'mt-4 text-body-md text-error';
+      status.textContent = 'Please fill in your name and a phone number.';
+      return;
+    }
+
+    const button = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+    button.disabled = true;
+    status.className = 'mt-4 text-body-md text-ink-soft';
+    status.textContent = 'Sending…';
+
+    const payload = Object.fromEntries(new FormData(form).entries());
+
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error(String(res.status));
+
+      status.className = 'mt-4 text-body-md text-success';
+      status.textContent =
+        'Got it — we will be in touch shortly, usually within the hour during the day.';
+      form.reset();
+    } catch {
+      /* Never dead-end an enquiry: if the mail path fails, hand the visitor
+         straight to WhatsApp with what they typed already in the message. */
+      const fallback = encodeURIComponent(
+        `Hi The Mess Junk! I tried the enquiry form and it didn't go through.\n\n` +
+          `Name: ${payload.name ?? ''}\nPhone: ${payload.phone ?? ''}\n` +
+          `Event type: ${payload.eventType ?? '-'}\nWorkshop: ${payload.workshop ?? '-'}\n` +
+          `Date: ${payload.date ?? '-'}\nGuests: ${payload.guests ?? '-'}\n\n${payload.message ?? ''}`,
+      );
+      status.className = 'mt-4 text-body-md text-error';
+      status.innerHTML =
+        `That did not send. <a class="underline underline-offset-4" href="${WHATSAPP_BASE}?text=${fallback}" target="_blank" rel="noopener">Send it on WhatsApp instead</a> — we have kept your details in the link.`;
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>

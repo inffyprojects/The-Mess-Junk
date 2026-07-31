@@ -1,0 +1,64 @@
+---
+/**
+ * 404 — served automatically by Cloudflare Pages for unmatched routes.
+ *
+ * On brand rather than apologetic: a wrong turn in a studio is not an error
+ * state worth dramatising.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Icon from '../components/Icon.astro';
+import Blob from '../components/motifs/Blob.astro';
+import MarkerUnderline from '../components/motifs/MarkerUnderline.astro';
+import { nav } from '../data/site';
+---
+
+<BaseLayout
+  title="Page not found"
+  description="That page does not exist at The Mess Junk. Head back to the workshops, or message us and we will point you the right way."
+>
+  <section class="section relative overflow-hidden">
+    <Blob variant={2} color="var(--pink)" opacity={0.16} class="absolute -right-[18%] -top-[30%] w-[60%] md:w-[38%]" />
+    <Blob variant={4} color="var(--cobalt)" opacity={0.1} class="absolute -bottom-[40%] -left-[16%] w-[52%] md:w-[32%]" />
+
+    <div class="shell relative z-[2]">
+      <div class="max-w-2xl py-8 md:py-16">
+        <p class="eyebrow">Error 404</p>
+        <h1 class="mt-4 text-display-xl">
+          You have made a
+          <span class="relative inline-block">
+            mess
+            <MarkerUnderline />
+          </span>
+          of that URL
+        </h1>
+        <p class="mt-6 max-w-prose text-body-lg text-ink-soft">
+          This page does not exist — or it did once and has since been cleared
+          off the table. Here is everywhere else you could be.
+        </p>
+
+        <ul class="mt-8 flex flex-wrap gap-2">
+          {
+            nav.map((item) => (
+              <li>
+                <a
+                  href={item.href}
+                  class="inline-flex h-11 items-center rounded-pill border border-line bg-white px-4 text-body-sm font-medium text-ink transition-colors duration-200 ease-brand hover:border-cobalt hover:text-cobalt"
+                >
+                  {item.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+
+        <div class="mt-10 flex flex-col gap-3 sm:flex-row">
+          <a href="/" class="btn btn-primary">Back to the studio</a>
+          <a href="/workshops/" class="btn btn-ghost">
+            Browse workshops
+            <Icon name="arrow-right" size={17} />
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

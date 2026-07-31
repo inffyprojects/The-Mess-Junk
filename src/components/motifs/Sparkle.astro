@@ -1,0 +1,36 @@
+---
+/**
+ * Sparkle — design doc §3.4.3
+ *
+ * "one simple 4-point star SVG, used only next to CTAs or as a tiny 'new'
+ * indicator. One shape, reused consistently, not a variety pack."
+ *
+ * Deliberately the only star in the project. If a second one appears
+ * anywhere, that is a bug against §3.4.
+ */
+
+interface Props {
+  size?: number;
+  color?: string;
+  class?: string;
+}
+
+const { size = 16, color = 'var(--acid-yellow)', class: className = '' } = Astro.props;
+---
+
+<svg
+  class:list={['inline-block shrink-0', className]}
+  width={size}
+  height={size}
+  viewBox="0 0 24 24"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  aria-hidden="true"
+  focusable="false"
+>
+  <!-- Concave-sided four-point star: the classic Y2K "twinkle", drawn with
+       cubic curves pulled toward the centre so the arms taper to needles. -->
+  <path
+    d="M12 0c.6 6.4 5 10.8 12 12-7 1.2-11.4 5.6-12 12-.6-6.4-5-10.8-12-12C7 10.8 11.4 6.4 12 0Z"
+    fill={color}></path>
+</svg>

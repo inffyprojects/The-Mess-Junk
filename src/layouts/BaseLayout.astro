@@ -1,0 +1,137 @@
+---
+/**
+ * BaseLayout — the shell every page renders into.
+ *
+ * Fonts are self-hosted via @fontsource (§3.2 specifies Bricolage Grotesque,
+ * Inter and Caveat). Self-hosting rather than linking fonts.googleapis.com
+ * removes two third-party connections from the critical path, which is a
+ * meaningful chunk of the mobile Lighthouse budget in §9.
+ */
+import '@fontsource-variable/bricolage-grotesque';
+import '@fontsource-variable/inter';
+import '@fontsource-variable/caveat';
+import '../styles/global.css';
+
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import WhatsAppFloat from '../components/WhatsAppFloat.astro';
+import { site } from '../data/site';
+
+interface Props {
+  title: string;
+  description: string;
+  /** Pre-fills the floating WhatsApp button with page-relevant context */
+  whatsappMessage?: string;
+}
+
+const { title, description, whatsappMessage } = Astro.props;
+
+const fullTitle = title === site.name ? `${site.name} — ${site.tagline}` : `${title} · ${site.name}`;
+
+/* Relative to the site root rather than absolute. The client points a custom
+   domain at the Pages project after launch, so nothing here may assume an
+   origin — Astro.url.pathname is all we need for canonical/OG paths. */
+const path = Astro.url.pathname;
+---
+
+<!doctype html>
+<html lang="en-IN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={path} />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <meta name="theme-color" content="#2A2ECF" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={site.name} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={path} />
+    <meta property="og:locale" content="en_IN" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!--
+      Local business structured data. With no blog to carry SEO (§11 open
+      question 2), this and the descriptive alt text are what the site has to
+      work with — worth getting right.
+    -->
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'LocalBusiness',
+        name: site.name,
+        slogan: site.tagline,
+        description: site.description,
+        email: site.email,
+        telephone: `+91${site.primaryPhone}`,
+        foundingDate: String(site.established),
+        address: {
+          '@type': 'PostalAddress',
+          addressLocality: site.city,
+          addressRegion: site.region,
+          addressCountry: 'IN',
+        },
+        areaServed: `${site.city}, ${site.region}`,
+        sameAs: [site.social.instagram],
+      })}
+    />
+
+    <!--
+      Marks the document as JS-capable BEFORE first paint, so scroll-reveal
+      elements can start hidden. Without this, a no-JS visitor would be served
+      permanently invisible content — the class gates the whole effect.
+    -->
+    <script is:inline>
+      document.documentElement.classList.add('js-reveal');
+    </script>
+  </head>
+
+  <body>
+    <a
+      href="#main"
+      class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-pill focus:bg-cobalt focus:px-5 focus:py-3 focus:text-white"
+    >
+      Skip to content
+    </a>
+
+    <Header />
+
+    <!-- Offsets the fixed header -->
+    <main id="main" class="pt-20 md:pt-24">
+      <slot />
+    </main>
+
+    <Footer />
+    <WhatsAppFloat message={whatsappMessage} />
+
+    <script>
+      /* Scroll reveal (§8): fade-up, 400ms, one easing, staggered inside grids.
+         IntersectionObserver only — no scroll handler, no library. Each element
+         is unobserved once shown so nothing re-animates on scroll-back, which
+         would read as a gimmick. */
+      const els = document.querySelectorAll<HTMLElement>('.reveal');
+
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && els.length) {
+        const io = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (!entry.isIntersecting) continue;
+              entry.target.classList.add('is-visible');
+              io.unobserve(entry.target);
+            }
+          },
+          { rootMargin: '0px 0px -8% 0px', threshold: 0.05 },
+        );
+        els.forEach((el) => io.observe(el));
+      } else {
+        els.forEach((el) => el.classList.add('is-visible'));
+      }
+    </script>
+  </body>
+</html>

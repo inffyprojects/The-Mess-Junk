@@ -1,0 +1,234 @@
+---
+/**
+ * ShotPanel — the designed state for an image slot.
+ *
+ * Design doc §4 defines an "intentional coming-soon state" for content that
+ * does not exist yet, and rule zero forbids placeholder imagery: "If a section
+ * has no real content yet, it gets an intentionally designed 'coming soon'
+ * state — never a placeholder image."
+ *
+ * The client has chosen to launch with no stock photography at all, so that
+ * treatment now covers every image slot on the site rather than only the
+ * portfolio. Each panel is a composition in the §3.4 motif language — a brand
+ * colour field, one or two blobs, the shared grain texture — built to the exact
+ * aspect ratio and corner radius the real photograph will occupy.
+ *
+ * This is not a placeholder. There is no "image missing" affordance, no grey
+ * box, no broken-frame icon: it reads as a graphic panel that happens to sit
+ * where a photograph will later sit.
+ *
+ * WHEN REAL PHOTOS ARRIVE: drop the file into src/assets/photos/ and pass it as
+ * `photo`. The panel then renders the image under the §4 duotone + grain
+ * treatment, at the identical ratio — no layout changes anywhere. See README.
+ */
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import { SHOTS, type ShotId } from '../data/shots';
+import Blob from './motifs/Blob.astro';
+import Grain from './motifs/Grain.astro';
+import Sparkle from './motifs/Sparkle.astro';
+
+interface Props {
+  shot: ShotId;
+  /** Supply once real photography exists; switches the panel to photo mode. */
+  photo?: ImageMetadata;
+  /** Overrides the registry alt text when `photo` is set. */
+  alt?: string;
+  /** Hero panels sit under white type and need a darker field. */
+  tone?: 'tint' | 'cobalt';
+  /** Adds the handwritten shot caption. Only worth it on large panels. */
+  caption?: boolean;
+  /** Set true for the LCP image so it is not lazy-loaded. */
+  eager?: boolean;
+  /** Blobs drift only in hero sections (§8). */
+  drift?: boolean;
+  /**
+   * Fill the parent instead of holding the registry aspect ratio. For the
+   * full-bleed home hero, where the section's own height governs and the
+   * panel is a background layer.
+   */
+  fill?: boolean;
+  /**
+   * Position within a grid. Pass the map index and neighbouring panels are
+   * guaranteed to differ in both palette and composition — hashing the shot id
+   * alone lets adjacent cards collide, which makes a row look like one repeated
+   * graphic.
+   */
+  index?: number;
+  class?: string;
+}
+
+const {
+  shot,
+  photo,
+  alt,
+  tone = 'tint',
+  caption = false,
+  eager = false,
+  drift = false,
+  fill = false,
+  index = 0,
+  class: className = '',
+} = Astro.props;
+
+const entry = SHOTS[shot];
+
+/* --- Deterministic composition ------------------------------------------
+   The panel picks its palette and blob arrangement from the shot id, so a
+   given slot always looks the same across builds and no two adjacent slots
+   collide — but the whole set still comes from one small, controlled system
+   rather than being drawn ad hoc. */
+const seed = [...entry.id].reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) >>> 0, 7);
+
+/* Palette rotation. Every pairing keeps the 60/30/10 balance in §3.1: a pale
+   field carrying most of the area, cobalt doing the structural work, pink and
+   yellow as accents only. Yellow never carries a whole field.
+
+   `fill` is the mass, `line` is the stroked blob layered over it, `spark` is
+   the single accent mark. Deliberately six entries against four layouts, so
+   colour and composition cycle out of step and adjacent cards in a grid do not
+   land on the same combination. */
+const TINT_FIELDS = [
+  { bg: 'var(--cobalt-05)', fill: 'var(--cobalt)', line: 'var(--pink)', spark: 'var(--acid-yellow)' },
+  { bg: 'var(--pink-05)', fill: 'var(--pink)', line: 'var(--cobalt)', spark: 'var(--cobalt)' },
+  { bg: 'var(--cobalt-10)', fill: 'var(--cobalt)', line: 'var(--ink)', spark: 'var(--acid-yellow)' },
+  { bg: 'var(--off-white)', fill: 'var(--pink)', line: 'var(--cobalt)', spark: 'var(--acid-yellow)' },
+  { bg: 'var(--pink-10)', fill: 'var(--cobalt)', line: 'var(--pink)', spark: 'var(--cobalt)' },
+  { bg: 'var(--cobalt-05)', fill: 'var(--acid-yellow)', line: 'var(--cobalt)', spark: 'var(--pink)' },
+];
+
+const COBALT_FIELD = {
+  bg: 'var(--cobalt)',
+  fill: 'var(--pink)',
+  line: 'var(--acid-yellow)',
+  spark: 'var(--acid-yellow)',
+};
+
+/* Palette and layout are each stepped by `index` at a different rate, so
+   neighbours in a grid never share both — and the pairing still stays stable
+   for a given slot across builds. */
+// Step by 1, not 2: with six palettes and a three-column grid, a step of 2
+// makes index and index+3 land on the same entry, so every column repeats its
+// palette down the page.
+const paletteIndex = (seed + index) % TINT_FIELDS.length;
+const field = tone === 'cobalt' ? COBALT_FIELD : TINT_FIELDS[paletteIndex];
+
+/* Three layers per panel — a filled blob for mass, a stroked blob offset from
+   it for line, and one sparkle. That third layer is what stops the panels
+   reading as washed-out gradient boxes.
+   Unsigned shifts throughout: `seed` can exceed 2^31, and a signed `>>` would
+   yield a negative index into the tables below. */
+const blobA = (((seed >>> 2) % 4) + 1) as 1 | 2 | 3 | 4;
+const blobB = ((((seed >>> 5) + 1) % 4) + 1) as 1 | 2 | 3 | 4;
+
+const LAYOUTS = [
+  {
+    a: '-bottom-[22%] -left-[14%] w-[82%]',
+    b: 'top-[-18%] right-[-12%] w-[62%]',
+    s: 'top-[14%] left-[12%]',
+  },
+  {
+    a: 'top-[-24%] right-[-16%] w-[76%]',
+    b: 'bottom-[-20%] left-[-14%] w-[66%]',
+    s: 'bottom-[18%] right-[16%]',
+  },
+  {
+    a: 'top-[10%] left-[-26%] w-[72%]',
+    b: 'bottom-[-26%] right-[-6%] w-[58%]',
+    s: 'top-[18%] right-[18%]',
+  },
+  {
+    a: 'bottom-[-30%] right-[4%] w-[88%]',
+    b: 'top-[-16%] left-[-20%] w-[54%]',
+    s: 'bottom-[22%] left-[14%]',
+  },
+];
+const layout = LAYOUTS[((seed >>> 8) + index) % LAYOUTS.length];
+
+/* Heroes are backdrops for white type, so they get mass only — the stroked
+   blob and the sparkle would compete with the headline, and at hero scale a
+   2.4-unit stroke in a 200-unit viewBox renders as a very heavy line. */
+const layered = tone !== 'cobalt';
+
+/* Captions quote the shot brief, but a brief is written for whoever holds the
+   camera and runs long. Take the first clause only — enough to say what belongs
+   here without turning the panel into a paragraph. */
+const captionText = entry.brief.split(/[.—]/)[0].trim();
+
+const RATIO_CLASS: Record<string, string> = {
+  '16/9': 'aspect-video',
+  '4/3': 'aspect-[4/3]',
+  '1/1': 'aspect-square',
+  '4/5': 'aspect-[4/5]',
+  '3/2': 'aspect-[3/2]',
+};
+
+const onCobalt = tone === 'cobalt';
+const sizing = fill ? 'h-full w-full' : RATIO_CLASS[entry.ratio];
+---
+
+{
+  photo ? (
+    /* Photo mode — §4 treatment: fixed ratio, brand radius, duotone wash and
+       grain from `.photo`, colour bursting through on hover per §8. */
+    <figure class:list={['photo photo-reveal', sizing, className]}>
+      <Image
+        src={photo}
+        alt={alt ?? entry.alt}
+        widths={[400, 800, 1200, 1600]}
+        sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 33vw"
+        loading={eager ? 'eager' : 'lazy'}
+        decoding={eager ? 'sync' : 'async'}
+        fetchpriority={eager ? 'high' : 'auto'}
+      />
+    </figure>
+  ) : (
+    <div
+      class:list={[
+        'relative isolate overflow-hidden rounded-card',
+        sizing,
+        className,
+      ]}
+      style={`background-color:${field.bg}`}
+      role="img"
+      aria-label={entry.alt}
+    >
+      <Blob
+        variant={blobA}
+        color={field.fill}
+        opacity={onCobalt ? 0.24 : 0.22}
+        drift={drift}
+        class={`absolute ${layout.a}`}
+      />
+      <Blob
+        variant={blobB}
+        color={onCobalt ? field.spark : field.line}
+        opacity={onCobalt ? 0.16 : 0.34}
+        outline={layered}
+        strokeWidth={1.6}
+        drift={drift}
+        class={`absolute ${layout.b}`}
+      />
+      {layered && <Sparkle size={20} color={field.spark} class={`absolute ${layout.s} opacity-70`} />}
+
+      <Grain opacity={onCobalt ? 0.34 : 0.3} />
+
+      {caption && (
+        <figcaption
+          class:list={[
+            'absolute inset-x-0 bottom-0 z-[2] px-5 pb-4 pt-12',
+            'font-scribble text-scribble leading-tight',
+            /* Scrim: the caption sits over whichever blob happens to be
+               underneath it, so it needs its own ground to stay legible. */
+            onCobalt
+              ? 'bg-gradient-to-t from-ink/70 to-transparent text-white/90'
+              : 'bg-gradient-to-t from-off-white via-off-white/85 to-transparent text-ink',
+          ]}
+        >
+          {captionText}
+          <span class="ml-1.5 text-ink-soft opacity-80">— photography coming soon</span>
+        </figcaption>
+      )}
+    </div>
+  )
+}

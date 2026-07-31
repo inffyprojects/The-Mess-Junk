@@ -1,0 +1,51 @@
+---
+/**
+ * Floating WhatsApp button — design doc §7.
+ *
+ * "Bottom-right, fixed, cobalt circle (not the generic green WhatsApp badge —
+ * keep it on-brand, use the WhatsApp glyph in white on cobalt), gentle pulse
+ * animation on load only, not looping forever."
+ *
+ * The pulse runs twice and stops (`animate-pulse-once` is defined with
+ * iteration-count 2 and `forwards` fill), and is suppressed entirely under
+ * prefers-reduced-motion by the global rule in global.css.
+ */
+import Icon from './Icon.astro';
+import { whatsappLink } from '../data/site';
+
+interface Props {
+  /** Pre-fills the WhatsApp message — pages pass their own context in */
+  message?: string;
+}
+
+const { message } = Astro.props;
+---
+
+<a
+  href={whatsappLink(message)}
+  target="_blank"
+  rel="noopener"
+  class:list={[
+    'group fixed bottom-5 right-5 z-40 md:bottom-7 md:right-7',
+    'inline-flex h-14 w-14 items-center justify-center rounded-pill',
+    'bg-cobalt text-white shadow-lift-lg',
+    'animate-pulse-once',
+    'transition-transform duration-300 ease-brand hover:scale-105 active:scale-95',
+  ]}
+>
+  <Icon name="whatsapp" size={26} label="Chat with The Mess Junk on WhatsApp" />
+
+  <!-- Label expands on hover at desktop widths; hidden from AT because the
+       icon already carries an accessible name. -->
+  <span
+    aria-hidden="true"
+    class:list={[
+      'pointer-events-none absolute right-full mr-3 hidden whitespace-nowrap md:block',
+      'rounded-pill bg-ink px-3.5 py-2 text-body-sm font-medium text-white',
+      'opacity-0 translate-x-1 transition-all duration-300 ease-brand',
+      'group-hover:opacity-100 group-hover:translate-x-0',
+    ]}
+  >
+    Chat on WhatsApp
+  </span>
+</a>

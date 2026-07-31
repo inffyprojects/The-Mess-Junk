@@ -1,0 +1,96 @@
+---
+/**
+ * Workshop card — design doc §6.3.
+ *
+ * "each workshop card = image, title, short one-line description, age-group
+ * chip, 'From ₹—' price tag, `Enquire` button."
+ *
+ * Two rules from the brief are load-bearing here:
+ *   · the price is always a starting-from figure (questionnaire Q25), and
+ *   · the CTA is always "Request a Custom Quote", never a fixed checkout
+ *     (Q24) — so this card links to the enquiry form, pre-filled, and never
+ *     to a cart.
+ */
+import type { CollectionEntry } from 'astro:content';
+import ShotPanel from './ShotPanel.astro';
+import Icon from './Icon.astro';
+import type { ShotId } from '../data/shots';
+import { formatPrice } from '../data/site';
+
+interface Props {
+  workshop: CollectionEntry<'workshops'>;
+  /** Stagger index within a grid — 70ms apart, per §8 */
+  index?: number;
+}
+
+const { workshop, index = 0 } = Astro.props;
+const w = workshop.data;
+
+/* Pre-fills the enquiry form's Event type with this workshop, so an enquiry
+   arrives already saying which session the visitor wants. */
+const enquiryHref = `/contact/?workshop=${encodeURIComponent(w.title)}`;
+---
+
+<article
+  class="card card-interactive reveal group flex flex-col"
+  style={`--reveal-delay:${Math.min(index, 6) * 70}ms`}
+  data-categories={w.categories.join(' ')}
+>
+  <ShotPanel shot={w.shot as ShotId} index={index} class="!rounded-none" />
+
+  <div class="flex flex-1 flex-col p-5">
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="chip chip-cobalt">{w.ageGroup}</span>
+      <span class="chip-outline chip">
+        <Icon name="clock" size={13} />
+        {w.duration}
+      </span>
+    </div>
+
+    <h3 class="mt-3.5 font-display text-[1.3rem] font-bold leading-tight tracking-tight">
+      {w.title}
+    </h3>
+
+    <p class="mt-2 text-body-sm font-normal leading-relaxed text-ink-soft">
+      {w.summary}
+    </p>
+
+    {
+      w.takeaway && (
+        <p class="mt-3 flex gap-2 text-body-sm text-ink-soft">
+          <Icon name="gift" size={16} class="mt-0.5 shrink-0 text-cobalt" />
+          <span>{w.takeaway}</span>
+        </p>
+      )
+    }
+
+    {
+      /* §6.3: "shown as a small inline note on relevant cards, not a scary
+         disclaimer block." */
+      w.minParticipants && (
+        <p class="mt-3 flex items-center gap-1.5 text-body-sm text-ink-soft">
+          <Icon name="users" size={15} class="shrink-0 text-cobalt" />
+          Minimum {w.minParticipants} participants
+        </p>
+      )
+    }
+
+    <div class="mt-auto flex items-end justify-between gap-4 pt-5">
+      <p class="leading-tight">
+        <span class="block text-body-sm text-ink-soft">From</span>
+        <span class="font-display text-[1.5rem] font-bold tracking-tight text-cobalt">
+          {formatPrice(w.priceFrom)}
+        </span>
+        <span class="block text-body-sm text-ink-soft">per person</span>
+      </p>
+
+      <a
+        href={enquiryHref}
+        class="btn btn-ghost !min-h-[2.75rem] shrink-0 !px-4 text-body-sm"
+      >
+        Enquire
+        <Icon name="arrow-right" size={16} />
+      </a>
+    </div>
+  </div>
+</article>

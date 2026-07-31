@@ -1,0 +1,47 @@
+---
+/**
+ * Marker underline — design doc §3.4.5
+ *
+ * "a hand-drawn SVG squiggle underline (pairs with the Caveat accent font)
+ * beneath 1 keyword per hero headline."
+ *
+ * One keyword. Per hero. The stroke is drawn with an uneven, slightly
+ * overshooting path so it reads as a marker pulled across the page rather than
+ * a border-bottom.
+ *
+ * Wrap the keyword in <Underlined> and it positions itself:
+ *   <span class="relative">Mess<MarkerUnderline /></span>
+ */
+
+interface Props {
+  color?: string;
+  /** Stroke weight in the 0-100 viewBox space */
+  weight?: number;
+  class?: string;
+}
+
+const { color = 'var(--pink)', weight = 7, class: className = '' } = Astro.props;
+---
+
+<svg
+  class:list={[
+    'pointer-events-none absolute left-0 w-full',
+    // Sits just under the baseline, overshooting the word slightly on both
+    // sides the way a real marker stroke would.
+    '-bottom-[0.12em] h-[0.28em] overflow-visible',
+    className,
+  ]}
+  viewBox="0 0 100 12"
+  preserveAspectRatio="none"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  aria-hidden="true"
+  focusable="false"
+>
+  <path
+    d="M1.5 8.4C14 4.6 30.5 3.2 47 3.6c17.2.4 34.5 2.8 51.2 6"
+    stroke={color}
+    stroke-width={weight}
+    stroke-linecap="round"
+    vector-effect="non-scaling-stroke"></path>
+</svg>

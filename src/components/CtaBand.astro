@@ -1,0 +1,69 @@
+---
+/**
+ * Final CTA band — design doc §6.1.7.
+ *
+ * "full-width cobalt block, white type, 'Ready to make a mess?' + WhatsApp/Book
+ * buttons."
+ *
+ * Reused at the foot of every page: this is the site's primary conversion
+ * surface and the questionnaire's stated primary action (Q38 — "Book a
+ * workshop or send a WhatsApp enquiry").
+ */
+import Icon from './Icon.astro';
+import Blob from './motifs/Blob.astro';
+import Grain from './motifs/Grain.astro';
+import Sparkle from './motifs/Sparkle.astro';
+import { whatsappLink } from '../data/site';
+
+interface Props {
+  title?: string;
+  lede?: string;
+  /** Pre-fills the WhatsApp message with page context */
+  whatsappMessage?: string;
+}
+
+const {
+  title = 'Ready to make a mess?',
+  lede = 'Tell us the date, the group and roughly what you have in mind. We will come back with a plan and a price — usually the same day.',
+  whatsappMessage,
+} = Astro.props;
+---
+
+<section class="section relative overflow-hidden bg-cobalt text-white">
+  <Blob variant={1} color="var(--pink)" opacity={0.3} class="absolute -left-[12%] -top-[55%] w-[46%]" />
+  <Blob variant={3} color="var(--acid-yellow)" opacity={0.16} class="absolute -bottom-[62%] -right-[8%] w-[40%]" />
+  <Grain opacity={0.3} />
+
+  <div class="shell relative z-[2]">
+    <div class="mx-auto max-w-2xl text-center">
+      <p class="reveal inline-flex items-center gap-2 text-label uppercase tracking-[0.09em] text-white/70">
+        <Sparkle size={14} />
+        Let's get started
+      </p>
+
+      <h2 class="reveal mt-4 text-display-lg text-white" style="--reveal-delay:60ms">
+        {title}
+      </h2>
+
+      <p class="reveal mx-auto mt-4 max-w-prose text-body-lg text-white/80" style="--reveal-delay:120ms">
+        {lede}
+      </p>
+
+      <div
+        class="reveal mt-8 flex flex-col justify-center gap-3 sm:flex-row"
+        style="--reveal-delay:180ms"
+      >
+        <a href="/contact/" class="btn btn-on-cobalt">Book a Workshop</a>
+        <a
+          href={whatsappLink(whatsappMessage)}
+          target="_blank"
+          rel="noopener"
+          class="btn btn-outline-white"
+        >
+          <Icon name="whatsapp" size={18} />
+          Chat on WhatsApp
+        </a>
+      </div>
+    </div>
+  </div>
+</section>

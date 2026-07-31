@@ -1,0 +1,203 @@
+---
+/**
+ * Footer — design doc §5.
+ *
+ * "logo/tagline · quick links · contact (address, phone numbers, email) ·
+ * social icons (Instagram primary) · WhatsApp CTA repeated."
+ *
+ * Also carries the newsletter signup, which the client ticked in the features
+ * list (questionnaire §9). It posts to the same Pages Function pattern as the
+ * enquiry form — see functions/api/newsletter.ts.
+ */
+import Logo from './Logo.astro';
+import Icon from './Icon.astro';
+import Grain from './motifs/Grain.astro';
+import Blob from './motifs/Blob.astro';
+import { nav, site, whatsappLink } from '../data/site';
+---
+
+<footer class="relative overflow-hidden bg-ink text-white/80">
+  <Blob variant={3} color="var(--cobalt)" opacity={0.28} class="absolute -left-[14%] -top-[40%] w-[52%]" />
+  <Blob variant={1} color="var(--pink)" opacity={0.12} class="absolute -bottom-[46%] -right-[10%] w-[44%]" />
+  <Grain opacity={0.22} />
+
+  <div class="shell relative z-[2]">
+    <!-- Newsletter — questionnaire §9 "Newsletter / email signup" -->
+    <div class="border-b border-white/10 py-12 md:py-14">
+      <div class="grid gap-8 md:grid-cols-[1.1fr_1fr] md:items-center md:gap-12">
+        <div>
+          <h2 class="font-display text-display-md text-white">
+            Know when the next one drops
+          </h2>
+          <p class="mt-2 max-w-prose text-body-md text-white/70">
+            New workshop dates, seasonal sessions and the occasional pop-up.
+            One email a month at most — we are running a studio, not a mailing list.
+          </p>
+        </div>
+
+        <form
+          id="newsletter-form"
+          class="flex flex-col gap-3 sm:flex-row"
+          novalidate
+        >
+          <label for="newsletter-email" class="sr-only">Email address</label>
+          <input
+            id="newsletter-email"
+            name="email"
+            type="email"
+            required
+            autocomplete="email"
+            placeholder="you@example.com"
+            class="field !border-white/20 !bg-white/5 !text-white placeholder:!text-white/45 sm:flex-1"
+          />
+          <button type="submit" class="btn btn-primary shrink-0">
+            Sign me up
+          </button>
+        </form>
+      </div>
+      <p
+        id="newsletter-status"
+        role="status"
+        aria-live="polite"
+        class="mt-3 text-body-sm text-white/70 empty:mt-0"
+      >
+      </p>
+    </div>
+
+    <!-- Main footer grid -->
+    <div class="grid gap-10 py-12 md:grid-cols-2 md:py-16 lg:grid-cols-[1.4fr_1fr_1.2fr]">
+      <div>
+        <Logo tone="dark" class="text-[1.5rem]" />
+        <p class="mt-4 max-w-xs font-scribble text-scribble text-white/70">
+          {site.tagline}
+        </p>
+        <p class="mt-4 max-w-xs text-body-sm leading-relaxed text-white/60">
+          {site.description}
+        </p>
+
+        <div class="mt-6 flex items-center gap-3">
+          <a
+            href={site.social.instagram}
+            target="_blank"
+            rel="noopener"
+            class="inline-flex h-11 w-11 items-center justify-center rounded-pill border border-white/20 text-white transition-colors duration-200 ease-brand hover:border-pink hover:bg-pink hover:text-ink"
+          >
+            <Icon name="instagram" size={19} label="The Mess Junk on Instagram" />
+          </a>
+          <a
+            href={whatsappLink()}
+            target="_blank"
+            rel="noopener"
+            class="inline-flex h-11 w-11 items-center justify-center rounded-pill border border-white/20 text-white transition-colors duration-200 ease-brand hover:border-pink hover:bg-pink hover:text-ink"
+          >
+            <Icon name="whatsapp" size={19} label="Chat with us on WhatsApp" />
+          </a>
+        </div>
+      </div>
+
+      <nav aria-label="Footer">
+        <h2 class="eyebrow !text-white/50">Explore</h2>
+        <ul class="mt-4 space-y-2.5">
+          {
+            nav.map((item) => (
+              <li>
+                <a
+                  href={item.href}
+                  class="text-body-sm text-white/75 transition-colors duration-200 ease-brand hover:text-pink"
+                >
+                  {item.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+
+      <div>
+        <h2 class="eyebrow !text-white/50">Get in touch</h2>
+        <ul class="mt-4 space-y-3.5 text-body-sm">
+          <li class="flex gap-3">
+            <Icon name="map-pin" size={18} class="mt-0.5 text-pink" />
+            <span class="text-white/75">{site.addressLine}</span>
+          </li>
+          <li class="flex gap-3">
+            <Icon name="phone" size={18} class="mt-0.5 text-pink" />
+            <span class="flex flex-wrap gap-x-2 text-white/75">
+              <a href={`tel:+91${site.primaryPhone}`} class="hover:text-pink">
+                +91 {site.primaryPhone}
+              </a>
+              {
+                site.otherPhones.map((n) => (
+                  <a href={`tel:+91${n}`} class="hover:text-pink">
+                    · +91 {n}
+                  </a>
+                ))
+              }
+            </span>
+          </li>
+          <li class="flex gap-3">
+            <Icon name="mail" size={18} class="mt-0.5 text-pink" />
+            <a href={`mailto:${site.email}`} class="text-white/75 hover:text-pink">
+              {site.email}
+            </a>
+          </li>
+          <li class="flex gap-3">
+            <Icon name="clock" size={18} class="mt-0.5 text-pink" />
+            <span class="text-white/75">{site.hours}</span>
+          </li>
+        </ul>
+
+        <a href={whatsappLink()} target="_blank" rel="noopener" class="btn btn-outline-white mt-6 w-full sm:w-auto">
+          <Icon name="whatsapp" size={18} />
+          Chat on WhatsApp
+        </a>
+      </div>
+    </div>
+
+    <div
+      class="flex flex-col gap-2 border-t border-white/10 py-6 text-body-sm text-white/45 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <p>&copy; {new Date().getFullYear()} {site.name}. Est. {site.established}, {site.city}.</p>
+      <p class="font-scribble text-scribble text-white/40">Made with a lot of mess.</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+  /* Newsletter signup — posts to the Cloudflare Pages Function. Progressive:
+     if the fetch fails for any reason we say so plainly rather than silently
+     swallowing the address. */
+  const form = document.getElementById('newsletter-form') as HTMLFormElement | null;
+  const status = document.getElementById('newsletter-status');
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!status) return;
+
+    const input = form.querySelector<HTMLInputElement>('#newsletter-email')!;
+    if (!input.checkValidity()) {
+      status.textContent = 'That email address does not look right — mind checking it?';
+      return;
+    }
+
+    const button = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+    button.disabled = true;
+    status.textContent = 'Signing you up…';
+
+    try {
+      const res = await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: input.value }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      status.textContent = "You're on the list. See you at the next one.";
+      form.reset();
+    } catch {
+      status.textContent =
+        'That did not go through. Message us on WhatsApp and we will add you manually.';
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>
