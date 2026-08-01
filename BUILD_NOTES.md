@@ -174,6 +174,60 @@ page order, section order, motion rules, breakpoints — is implemented as writt
 
 ---
 
+## Phase 2: Decap CMS at `/admin`
+
+A browser-based admin panel has been added so the team can manage content without
+touching Git or code. It edits the same files documented above — nothing about
+the build or the schemas has changed.
+
+### What was built
+
+- **Decap CMS** (pinned to 3.3.3) at `/admin`, with the GitHub backend.
+- **OAuth proxy** at `/api/auth` and `/api/callback`, with adapters for both
+  Cloudflare Pages and Vercel (same pattern as the enquiry form).
+- **Four collections**: Workshops (folder), FAQ (folder), Pricing Tiers (file),
+  Upcoming Dates (file). Every field matches `src/content.config.ts` exactly,
+  with hints written for non-technical editors.
+- **`Docs/CLIENT_GUIDE.md`** — a plain-language guide for the team.
+
+### Decisions taken
+
+1. **Preview pane: disabled.** The site's visual language (motifs, tokens,
+   components) cannot be replicated in Decap's generic preview iframe. Showing
+   raw unstyled Markdown would misrepresent the design and confuse editors.
+   The live site is the preview — saves take about a minute to go live.
+
+2. **Editorial workflow: not enabled.** `editorial_workflow` turns every save
+   into a pull request. For a 3-person team with no Git experience, this adds
+   an opaque step ("why is my change not live?") without a matching benefit —
+   there is nobody to review the PR. An accidental publish is fixed by editing
+   again. **Recommendation: leave it off for now.** Enable it later if the team
+   grows or a new editor is being trained — it is one line in `config.yml`.
+
+3. **Media folder: `src/assets/photos/`.** This keeps uploads inside Astro's
+   image pipeline (Sharp, AVIF/WebP, responsive `srcset`), which is what the
+   design document's performance budget (§9) requires. The simpler alternative
+   (`public/uploads/`) would bypass optimisation, break the duotone treatment
+   (§4), and inflate mobile page weight. The `public_folder` in the CMS config
+   is set to `/src/assets/photos` so Markdown references resolve correctly.
+
+4. **JSON file collections.** Decap writes single-file JSON collections as
+   `{ "key": [...] }` rather than a bare array. The Astro content config now
+   accepts both shapes via a custom parser, so files edited by hand (bare array)
+   and files edited via the CMS (wrapped) both build correctly.
+
+### New environment variables
+
+| Name | Required | Where |
+|---|---|---|
+| `GITHUB_OAUTH_CLIENT_ID` | Yes, for CMS login | Host dashboard |
+| `GITHUB_OAUTH_CLIENT_SECRET` | Yes, for CMS login | Host dashboard (**encrypt**) |
+
+Setup: create a GitHub OAuth App with the callback URL pointing at
+`/api/callback` on your domain, then add the two values. See README.
+
+---
+
 ## 5. Known limitations
 
 - **Workshop dates go stale.** `upcoming.json` is filtered at build time against
