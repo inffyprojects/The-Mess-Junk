@@ -2,6 +2,20 @@ import { defineCollection, z } from 'astro:content';
 import { glob, file } from 'astro/loaders';
 
 /**
+ * Decap CMS file collections write JSON as { "key": [...] } rather than a
+ * bare array. This parser accepts both shapes so the build works whether
+ * the file was edited by hand (bare array) or via the CMS (wrapped object).
+ */
+function jsonArrayParser(key: string) {
+  return (text: string) => {
+    const data = JSON.parse(text);
+    if (Array.isArray(data)) return data;
+    if (data && typeof data === 'object' && Array.isArray(data[key])) return data[key];
+    return data;
+  };
+}
+
+/**
  * Content collections — the site's editable content.
  *
  * There is no database and no CMS. Everything the client will realistically
@@ -73,7 +87,7 @@ const faq = defineCollection({
 });
 
 const pricing = defineCollection({
-  loader: file('./src/content/pricing/tiers.json'),
+  loader: file('./src/content/pricing/tiers.json', { parser: jsonArrayParser('tiers') }),
   schema: z.object({
     id: z.string(),
     name: z.string(),
@@ -91,7 +105,7 @@ const pricing = defineCollection({
 });
 
 const dates = defineCollection({
-  loader: file('./src/content/dates/upcoming.json'),
+  loader: file('./src/content/dates/upcoming.json', { parser: jsonArrayParser('dates') }),
   schema: z.object({
     id: z.string(),
     /** ISO date, YYYY-MM-DD */
