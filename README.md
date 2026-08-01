@@ -175,6 +175,74 @@ All in one file: **`src/data/site.ts`**. Changing `primaryPhone` and
 
 ---
 
+## Content management (CMS)
+
+The site has a browser-based admin panel at **`/admin`** powered by
+[Decap CMS](https://decapcms.org/). It lets the team add, edit and remove
+workshops, prices, FAQ entries and upcoming dates without touching code. Changes
+are committed to Git and the site rebuilds automatically.
+
+The admin panel edits the exact same Markdown and JSON files under `src/content/`
+that this README documents above. Nothing about the build or the schemas changes.
+
+See **`Docs/CLIENT_GUIDE.md`** for the team-facing guide.
+
+### Setting up CMS authentication
+
+The CMS authenticates via GitHub OAuth. You need a GitHub OAuth App:
+
+1. Go to **GitHub > Settings > Developer settings > OAuth Apps > New OAuth App**.
+2. Set the **Authorization callback URL** to
+   `https://yourdomain.in/api/callback` (or your Vercel/Cloudflare preview URL).
+3. Copy the **Client ID** and generate a **Client Secret**.
+4. Add both to your host's environment variables:
+
+   | Name | Value |
+   |---|---|
+   | `GITHUB_OAUTH_CLIENT_ID` | The client ID from step 3 |
+   | `GITHUB_OAUTH_CLIENT_SECRET` | The client secret from step 3 (**encrypt it**) |
+
+5. Redeploy. Go to `/admin` and log in with a GitHub account that has write
+   access to the repository.
+
+The OAuth proxy runs as two serverless functions (`/api/auth` and
+`/api/callback`), with adapters for both Cloudflare Pages and Vercel — the same
+pattern as the contact form. Logic lives once in `lib/oauth.ts`.
+
+### Architecture
+
+```
+public/admin/index.html     Decap CMS entry point (pinned to 3.3.3)
+public/admin/config.yml     collection + field definitions
+lib/oauth.ts                GitHub OAuth token exchange logic
+api/auth.ts                 Vercel adapter — redirects to GitHub authorize
+api/callback.ts             Vercel adapter — exchanges code for token
+functions/api/auth.ts       Cloudflare Pages adapter
+functions/api/callback.ts   Cloudflare Pages adapter
+```
+
+### Decisions
+
+- **Preview pane disabled.** The site's design uses custom tokens, motifs and
+  components that cannot be replicated in a generic preview iframe. Showing raw
+  unstyled Markdown would misrepresent the design. Editors see the live site
+  after each save (about a minute).
+
+- **Editorial workflow not enabled.** `publish_mode: editorial_workflow` turns
+  every save into a pull request, adding a review step before changes go live.
+  For a 3-person team that has never used Git, the extra step adds confusion
+  without a clear benefit — there is nobody to review the PR, and an accidental
+  publish is fixed by editing again. If the team grows or if someone is training
+  a new editor, enable it by adding `publish_mode: editorial_workflow` to
+  `public/admin/config.yml`.
+
+- **Media uploads go to `src/assets/photos/`.** This keeps images inside Astro's
+  build pipeline (Sharp, AVIF/WebP, `srcset`), preserving the mobile performance
+  budget from the design document. The alternative (`public/uploads/`) would be
+  simpler for the CMS but would bypass image optimisation entirely.
+
+---
+
 ## Deploying to Cloudflare Pages
 
 ### First-time setup (Git integration — recommended)
@@ -281,6 +349,8 @@ or in `.dev.vars` locally (which is gitignored).
 | `CONTACT_TO` | Sends enquiries somewhere other than `themessjunk@gmail.com`, without a code change. |
 | `SHEET_WEBHOOK_URL` | A Google Apps Script web-app URL. Used automatically if Resend is missing or failing, so enquiries land in a spreadsheet rather than being lost. |
 | `BUTTONDOWN_API_KEY` | Switches newsletter signups from "email the studio" to a real Buttondown list (free to 100 subscribers). |
+| `GITHUB_OAUTH_CLIENT_ID` | GitHub OAuth App client ID. Required for the Decap CMS admin panel at `/admin`. See "Content management (CMS)" below. |
+| `GITHUB_OAUTH_CLIENT_SECRET` | GitHub OAuth App client secret. Required for the CMS. **Must be set as a secret (encrypted).** |
 
 ### Sending from your own domain
 
@@ -427,15 +497,23 @@ const pieces = [
 ```
 ├── Docs/                        the original client brief + design document
 ├── lib/
-│   └── enquiry.ts               validation + email delivery (the real logic)
+│   ├── enquiry.ts               validation + email delivery (the real logic)
+│   └── oauth.ts                 GitHub OAuth token exchange for CMS login
 ├── functions/api/               Cloudflare Pages adapters (ignored by Vercel)
 │   ├── contact.ts
-│   └── newsletter.ts
+│   ├── newsletter.ts
+│   ├── auth.ts                  CMS OAuth redirect
+│   └── callback.ts             CMS OAuth callback
 ├── api/                         Vercel adapters (ignored by Cloudflare)
 │   ├── contact.ts
-│   └── newsletter.ts
+│   ├── newsletter.ts
+│   ├── auth.ts                  CMS OAuth redirect
+│   └── callback.ts             CMS OAuth callback
 ├── public/
-│   └── favicon.svg              splat mark on cobalt
+│   ├── favicon.svg              splat mark on cobalt
+│   └── admin/                   Decap CMS (the content management panel)
+│       ├── index.html
+│       └── config.yml
 ├── scripts/
 │   └── fetch-images.mjs         stock-image sourcing (unused — see BUILD_NOTES §2)
 ├── src/
