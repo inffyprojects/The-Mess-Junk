@@ -1,26 +1,89 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex" />
   <title>The Mess Junk — Content Manager</title>
+
+  <!--
+    Point Decap at the config file with an ABSOLUTE path.
+
+    Without this, Decap fetches "config.yml" relative to the current URL. The
+    host serves this page at both /admin and /admin/ without redirecting
+    between them, so visiting /admin (which is what people type) resolves the
+    relative path to /config.yml at the site root — a 404. Decap then reports a
+    cascade of misleading errors instead: "config must have required property
+    'media_folder' / 'collections' / 'backend'", none of which are the real
+    problem.
+
+    An absolute href makes the config load correctly from either URL.
+  -->
+  <link rel="cms-config-url" type="text/yaml" href="/admin/config.yml" />
+</head>
+<body>
+  <!--
+    Decap mounts itself by appending to `document.body`, so both of these
+    scripts MUST run after the body element exists. Loading them in <head>
+    (even with CMS_MANUAL_INIT) throws
+    "Uncaught TypeError: Cannot read properties of null (reading 'appendChild')"
+    and leaves a completely blank page with no visible error — which is exactly
+    what happened before. Keep them at the end of <body>.
+  -->
+  <noscript>
+    <p style="font-family: system-ui, sans-serif; max-width: 34rem; margin: 4rem auto; line-height: 1.6;">
+      The content manager needs JavaScript enabled.
+    </p>
+  </noscript>
+
+  <div id="cms-fallback" hidden>
+    <div style="font-family: system-ui, sans-serif; max-width: 34rem; margin: 4rem auto; line-height: 1.6; color: #17173A;">
+      <h1 style="font-size: 1.25rem;">The content manager could not start</h1>
+      <p>
+        This is usually a network problem loading the editor, or a mistake in
+        <code>admin/config.yml</code>. Reload the page; if it keeps happening,
+        send this page's browser console output to your developer.
+      </p>
+    </div>
+  </div>
+
   <script>window.CMS_MANUAL_INIT = true;</script>
   <script src="https://unpkg.com/decap-cms@3.3.3/dist/decap-cms.js"></script>
   <script>
-    // base_url must be an absolute origin for the OAuth redirect to work.
-    // Setting it here instead of in config.yml avoids hardcoding a domain,
-    // so the CMS works on any host (Vercel, Cloudflare, preview deploys).
-    window.CMS.init({
-      config: {
-        load_config_file: true,
-        backend: {
-          base_url: window.location.origin
-        }
+    (function () {
+      var fallback = document.getElementById('cms-fallback');
+
+      function fail(reason) {
+        console.error('Decap CMS failed to start:', reason);
+        if (fallback) fallback.hidden = false;
       }
-    });
+
+      if (!window.CMS || typeof window.CMS.init !== 'function') {
+        fail('the editor bundle did not load (check the network tab)');
+        return;
+      }
+
+      try {
+        /*
+          `base_url` has to be an absolute origin for the GitHub OAuth redirect.
+          Reading it from window.location.origin at runtime — rather than
+          hardcoding it in config.yml — keeps the CMS working on the production
+          domain, on Vercel/Cloudflare preview URLs, and on localhost, without
+          a config change per environment.
+
+          Everything else (backend repo, branch, collections) is loaded from
+          admin/config.yml, which is why load_config_file stays true.
+        */
+        window.CMS.init({
+          config: {
+            load_config_file: true,
+            backend: { base_url: window.location.origin }
+          }
+        });
+      } catch (err) {
+        fail(err && err.message ? err.message : err);
+      }
+    })();
   </script>
-</head>
-<body>
 </body>
 </html>

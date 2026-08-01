@@ -1,83 +1,85 @@
-[
-  {
-    "id": "2026-08-08-pottery",
-    "date": "2026-08-08",
-    "time": "11:00 AM – 1:30 PM",
-    "workshop": "Pottery & Wheel Throwing",
-    "seatsTotal": 8,
-    "seatsLeft": 3,
-    "priceFrom": 1200
-  },
-  {
-    "id": "2026-08-09-kids",
-    "date": "2026-08-09",
-    "time": "10:30 AM – 12:00 PM",
-    "workshop": "Kids Messy Play Club",
-    "seatsTotal": 12,
-    "seatsLeft": 7,
-    "priceFrom": 499
-  },
-  {
-    "id": "2026-08-15-rakhi",
-    "date": "2026-08-15",
-    "time": "4:00 PM – 6:00 PM",
-    "workshop": "Seasonal & Festive Workshops — Rakhi Kits",
-    "seatsTotal": 16,
-    "seatsLeft": 0,
-    "priceFrom": 599
-  },
-  {
-    "id": "2026-08-22-canvas",
-    "date": "2026-08-22",
-    "time": "6:00 PM – 8:00 PM",
-    "workshop": "Canvas Painting Social",
-    "seatsTotal": 14,
-    "seatsLeft": 9,
-    "priceFrom": 899
-  },
-  {
-    "id": "2026-08-29-journal",
-    "date": "2026-08-29",
-    "time": "5:00 PM – 6:30 PM",
-    "workshop": "Journaling & Collage",
-    "seatsTotal": 10,
-    "seatsLeft": 2,
-    "priceFrom": 599
-  },
-  {
-    "id": "2026-09-05-tufting",
-    "date": "2026-09-05",
-    "time": "11:00 AM – 2:00 PM",
-    "workshop": "Rug Tufting",
-    "seatsTotal": 6,
-    "seatsLeft": 5,
-    "priceFrom": 2500
-  },
-  {
-    "id": "2026-09-12-teen",
-    "date": "2026-09-12",
-    "time": "4:00 PM – 6:00 PM",
-    "workshop": "Teen Art Jam",
-    "seatsTotal": 14,
-    "seatsLeft": 11,
-    "priceFrom": 699
-  },
-  {
-    "id": "2026-09-19-candle",
-    "date": "2026-09-19",
-    "time": "5:30 PM – 7:00 PM",
-    "workshop": "Candle Making",
-    "seatsTotal": 12,
-    "seatsLeft": 12,
-    "priceFrom": 799
-  },
-  {
-    "id": "2026-09-26-print",
-    "date": "2026-09-26",
-    "time": "11:00 AM – 1:00 PM",
-    "workshop": "Block Printing on Fabric",
-    "seatsTotal": 12,
-    "seatsLeft": 6,
-    "priceFrom": 899
-  }
-]
+{
+  "dates": [
+    {
+      "id": "2026-08-08-pottery",
+      "date": "2026-08-08",
+      "time": "11:00 AM – 1:30 PM",
+      "workshop": "Pottery & Wheel Throwing",
+      "seatsTotal": 8,
+      "seatsLeft": 3,
+      "priceFrom": 1200
+    },
+    {
+      "id": "2026-08-09-kids",
+      "date": "2026-08-09",
+      "time": "10:30 AM – 12:00 PM",
+      "workshop": "Kids Messy Play Club",
+      "seatsTotal": 12,
+      "seatsLeft": 7,
+      "priceFrom": 499
+    },
+    {
+      "id": "2026-08-15-rakhi",
+      "date": "2026-08-15",
+      "time": "4:00 PM – 6:00 PM",
+      "workshop": "Seasonal & Festive Workshops — Rakhi Kits",
+      "seatsTotal": 16,
+      "seatsLeft": 0,
+      "priceFrom": 599
+    },
+    {
+      "id": "2026-08-22-canvas",
+      "date": "2026-08-22",
+      "time": "6:00 PM – 8:00 PM",
+      "workshop": "Canvas Painting Social",
+      "seatsTotal": 14,
+      "seatsLeft": 9,
+      "priceFrom": 899
+    },
+    {
+      "id": "2026-08-29-journal",
+      "date": "2026-08-29",
+      "time": "5:00 PM – 6:30 PM",
+      "workshop": "Journaling & Collage",
+      "seatsTotal": 10,
+      "seatsLeft": 2,
+      "priceFrom": 599
+    },
+    {
+      "id": "2026-09-05-tufting",
+      "date": "2026-09-05",
+      "time": "11:00 AM – 2:00 PM",
+      "workshop": "Rug Tufting",
+      "seatsTotal": 6,
+      "seatsLeft": 5,
+      "priceFrom": 2500
+    },
+    {
+      "id": "2026-09-12-teen",
+      "date": "2026-09-12",
+      "time": "4:00 PM – 6:00 PM",
+      "workshop": "Teen Art Jam",
+      "seatsTotal": 14,
+      "seatsLeft": 11,
+      "priceFrom": 699
+    },
+    {
+      "id": "2026-09-19-candle",
+      "date": "2026-09-19",
+      "time": "5:30 PM – 7:00 PM",
+      "workshop": "Candle Making",
+      "seatsTotal": 12,
+      "seatsLeft": 12,
+      "priceFrom": 799
+    },
+    {
+      "id": "2026-09-26-print",
+      "date": "2026-09-26",
+      "time": "11:00 AM – 1:00 PM",
+      "workshop": "Block Printing on Fabric",
+      "seatsTotal": 12,
+      "seatsLeft": 6,
+      "priceFrom": 899
+    }
+  ]
+}

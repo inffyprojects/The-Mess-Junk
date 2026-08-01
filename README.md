@@ -122,15 +122,23 @@ do not hardcode it.
 **`src/content/dates/upcoming.json`** — this drives the "Check a date" picker on
 the Contact page.
 
+The file holds a `dates` array — one object per session. (`tiers.json` follows
+the same pattern with a `tiers` array.) This is the shape the CMS reads and
+writes; a bare top-level array also still works if you prefer editing by hand.
+
 ```json
 {
-  "id": "2026-08-08-pottery",
-  "date": "2026-08-08",
-  "time": "11:00 AM – 1:30 PM",
-  "workshop": "Pottery & Wheel Throwing",
-  "seatsTotal": 8,
-  "seatsLeft": 3,
-  "priceFrom": 1200
+  "dates": [
+    {
+      "id": "2026-08-08-pottery",
+      "date": "2026-08-08",
+      "time": "11:00 AM – 1:30 PM",
+      "workshop": "Pottery & Wheel Throwing",
+      "seatsTotal": 8,
+      "seatsLeft": 3,
+      "priceFrom": 1200
+    }
+  ]
 }
 ```
 

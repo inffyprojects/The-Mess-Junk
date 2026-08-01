@@ -1,55 +1,57 @@
-[
-  {
-    "id": "public",
-    "name": "Public Workshops",
-    "price": "₹499 – ₹2,500",
-    "priceNote": "per person, depending on the craft",
-    "summary": "Book a seat at a scheduled session. Come alone, come with a friend — the table is shared and the price is per head.",
-    "includes": [
-      "All materials and tools for the session",
-      "An artist running the room, not just supervising it",
-      "Apron and workspace — wear what you like",
-      "Everything you make goes home with you",
-      "Firing and finishing where the craft needs it"
-    ],
-    "enquiryType": "Public workshop",
-    "featured": true,
-    "order": 10
-  },
-  {
-    "id": "private",
-    "name": "Private & Group Workshops",
-    "price": "Custom",
-    "priceNote": "minimum 20 participants",
-    "summary": "The studio booked out for your group — a birthday, a family, a team, a farewell. You pick the craft and the date.",
-    "includes": [
-      "Exclusive use of the studio for your session",
-      "Your choice of craft from the full workshop list",
-      "Materials and artists for the whole group",
-      "Refreshments available as an add-on",
-      "Personalised kits available as an add-on",
-      "Venue booking elsewhere in Vadodara if you would rather not come to us"
-    ],
-    "enquiryType": "Private / group workshop",
-    "featured": false,
-    "order": 20
-  },
-  {
-    "id": "corporate",
-    "name": "Corporate & College",
-    "price": "Let's talk",
-    "priceNote": "priced per group, drops sharply with size",
-    "summary": "Team building at your office or ours, and pop-up sessions run on campus for fests and clubs. Built around your headcount, slot and budget.",
-    "includes": [
-      "Session designed around your group and objective",
-      "We travel to your office or campus with the studio",
-      "Per-head pricing that scales with group size",
-      "Individual pieces plus one collaborative work",
-      "Invoicing and paperwork handled properly",
-      "Student pricing from ₹350 per head for college sessions"
-    ],
-    "enquiryType": "Corporate / college workshop",
-    "featured": false,
-    "order": 30
-  }
-]
+{
+  "tiers": [
+    {
+      "id": "public",
+      "name": "Public Workshops",
+      "price": "₹499 – ₹2,500",
+      "priceNote": "per person, depending on the craft",
+      "summary": "Book a seat at a scheduled session. Come alone, come with a friend — the table is shared and the price is per head.",
+      "includes": [
+        "All materials and tools for the session",
+        "An artist running the room, not just supervising it",
+        "Apron and workspace — wear what you like",
+        "Everything you make goes home with you",
+        "Firing and finishing where the craft needs it"
+      ],
+      "enquiryType": "Public workshop",
+      "featured": true,
+      "order": 10
+    },
+    {
+      "id": "private",
+      "name": "Private & Group Workshops",
+      "price": "Custom",
+      "priceNote": "minimum 20 participants",
+      "summary": "The studio booked out for your group — a birthday, a family, a team, a farewell. You pick the craft and the date.",
+      "includes": [
+        "Exclusive use of the studio for your session",
+        "Your choice of craft from the full workshop list",
+        "Materials and artists for the whole group",
+        "Refreshments available as an add-on",
+        "Personalised kits available as an add-on",
+        "Venue booking elsewhere in Vadodara if you would rather not come to us"
+      ],
+      "enquiryType": "Private / group workshop",
+      "featured": false,
+      "order": 20
+    },
+    {
+      "id": "corporate",
+      "name": "Corporate & College",
+      "price": "Let's talk",
+      "priceNote": "priced per group, drops sharply with size",
+      "summary": "Team building at your office or ours, and pop-up sessions run on campus for fests and clubs. Built around your headcount, slot and budget.",
+      "includes": [
+        "Session designed around your group and objective",
+        "We travel to your office or campus with the studio",
+        "Per-head pricing that scales with group size",
+        "Individual pieces plus one collaborative work",
+        "Invoicing and paperwork handled properly",
+        "Student pricing from ₹350 per head for college sessions"
+      ],
+      "enquiryType": "Corporate / college workshop",
+      "featured": false,
+      "order": 30
+    }
+  ]
+}
