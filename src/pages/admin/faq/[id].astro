@@ -1,0 +1,175 @@
+---
+/**
+ * Create or edit an FAQ entry.
+ */
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import AdminField from '../../../components/admin/AdminField.astro';
+import Icon from '../../../components/Icon.astro';
+import { requireSession, str, int, slugify, friendlyDbError } from '../../../lib/admin';
+import {
+  getFaqEntry,
+  createFaq,
+  updateFaq,
+  deleteFaq,
+  FAQ_GROUPS,
+  type FaqGroup,
+  type FaqEntry,
+} from '../../../lib/db';
+import { triggerRebuild } from '../../../lib/deploy';
+
+const denied = await requireSession(Astro);
+if (denied) return denied;
+
+const GROUP_LABELS: Record<FaqGroup, string> = {
+  booking: 'Booking & availability',
+  pricing: 'Pricing & group size',
+  expect: 'What to expect',
+};
+
+const idParam = Astro.params.id!;
+const isNew = idParam === 'new';
+const id = isNew ? null : Number(idParam);
+
+if (!isNew && !Number.isInteger(id)) return Astro.redirect('/admin/faq/', 302);
+
+let error = '';
+let record: FaqEntry | null = null;
+
+let form = { question: '', group: 'booking', answer: '', order: '50' };
+
+if (!isNew) {
+  record = await getFaqEntry(id!);
+  if (!record) return Astro.redirect('/admin/faq/', 302);
+  form = {
+    question: record.question,
+    group: record.group,
+    answer: record.answer,
+    order: String(record.order),
+  };
+}
+
+if (Astro.request.method === 'POST') {
+  const data = await Astro.request.formData();
+
+  if (str(data, 'intent') === 'delete' && !isNew) {
+    try {
+      await deleteFaq(id!);
+      await triggerRebuild();
+      return Astro.redirect('/admin/faq/?deleted=1', 302);
+    } catch (err) {
+      error = friendlyDbError(err);
+    }
+  } else {
+    form = {
+      question: str(data, 'question'),
+      group: str(data, 'group'),
+      answer: str(data, 'answer'),
+      order: str(data, 'order'),
+    };
+
+    if (!form.question) error = 'Write the question.';
+    else if (!form.answer) error = 'Write the answer.';
+    else if (!FAQ_GROUPS.includes(form.group as FaqGroup)) error = 'Choose a section.';
+
+    if (!error) {
+      const payload = {
+        slug: record?.slug ?? slugify(form.question),
+        question: form.question,
+        group: form.group as FaqGroup,
+        answer: form.answer,
+        order: int(data, 'order') ?? 50,
+      };
+      try {
+        if (isNew) await createFaq(payload);
+        else await updateFaq(id!, payload);
+        await triggerRebuild();
+        return Astro.redirect('/admin/faq/?saved=1', 302);
+      } catch (err) {
+        error = friendlyDbError(err);
+      }
+    }
+  }
+}
+---
+
+<AdminLayout title={isNew ? 'New question' : 'Edit question'}>
+  <a href="/admin/faq/" class="inline-flex items-center gap-1.5 text-body-sm text-ink-soft hover:text-cobalt">
+    <Icon name="chevron-right" size={15} class="rotate-180" />
+    All questions
+  </a>
+
+  <h1 class="mt-3 text-display-md">{isNew ? 'Add a question' : 'Edit question'}</h1>
+
+  {
+    error && (
+      <p role="alert" class="mt-6 rounded-card-sm border border-error/40 bg-error/5 px-4 py-3 text-body-sm text-error">
+        {error}
+      </p>
+    )
+  }
+
+  <form method="POST" class="mt-8 max-w-2xl space-y-6">
+    <AdminField
+      label="Question"
+      name="question"
+      required
+      hint='As a visitor would ask it — "How do I book?", "What should I wear?".'
+    >
+      <input id="question" name="question" class="field" value={form.question} required />
+    </AdminField>
+
+    <div class="grid gap-6 sm:grid-cols-2">
+      <AdminField label="Section" name="group" required hint="Which part of the FAQ page it appears in.">
+        <select id="group" name="group" class="field">
+          {
+            FAQ_GROUPS.map((g) => (
+              <option value={g} selected={form.group === g}>
+                {GROUP_LABELS[g]}
+              </option>
+            ))
+          }
+        </select>
+      </AdminField>
+
+      <AdminField label="Sort order" name="order" hint="Lower numbers first, within the section.">
+        <input id="order" name="order" type="number" step="1" class="field" value={form.order} />
+      </AdminField>
+    </div>
+
+    <AdminField
+      label="Answer"
+      name="answer"
+      required
+      hint="Two or three sentences. Write it like a WhatsApp reply — short, clear, no jargon."
+    >
+      <textarea id="answer" name="answer" rows="6" class="field resize-y" required>{form.answer}</textarea>
+    </AdminField>
+
+    <div class="flex flex-wrap items-center gap-3 border-t border-line pt-6">
+      <button type="submit" class="btn btn-primary">{isNew ? 'Add question' : 'Save changes'}</button>
+      <a href="/admin/faq/" class="btn btn-ghost">Cancel</a>
+    </div>
+  </form>
+
+  {
+    !isNew && (
+      <form
+        method="POST"
+        class="mt-10 max-w-2xl rounded-card border border-error/30 bg-error/5 p-5"
+        onsubmit="return confirm('Delete this question?')"
+      >
+        <input type="hidden" name="intent" value="delete" />
+        <h2 class="font-display text-[1.05rem] font-bold">Delete this question</h2>
+        <p class="mt-1.5 text-body-sm text-ink-soft">It comes off the FAQ page on the next rebuild.</p>
+        <button
+          type="submit"
+          class="btn mt-4 !min-h-[2.75rem] !border-error !bg-transparent !px-4 text-body-sm !text-error hover:!bg-error hover:!text-white"
+        >
+          Delete
+        </button>
+      </form>
+    )
+  }
+</AdminLayout>

@@ -1,0 +1,96 @@
+---
+/**
+ * Admin sign-in.
+ *
+ * The one admin route that does not require a session. Handles its own POST
+ * rather than posting to a separate endpoint, so a failed attempt can re-render
+ * the form with an error and no JavaScript is involved anywhere.
+ */
+export const prerender = false;
+
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import {
+  verifyPassword,
+  createSession,
+  sessionCookieOptions,
+  SESSION_COOKIE_NAME,
+  getAuthConfig,
+} from '../../lib/auth';
+
+let error = '';
+
+/** Where to go after signing in. */
+const nextParam = Astro.url.searchParams.get('next') ?? '/admin/';
+/* Only ever redirect within this site. An attacker-supplied `next` of
+   https://evil.example would otherwise turn the login page into an open
+   redirect. */
+const next = nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : '/admin/';
+
+if (Astro.request.method === 'POST') {
+  try {
+    const config = getAuthConfig();
+    const form = await Astro.request.formData();
+    const password = String(form.get('password') ?? '');
+
+    if (await verifyPassword(password, config.passwordHash)) {
+      const token = await createSession(config.sessionSecret);
+      /* Astro.cookies (not Astro.response.headers) — see sessionCookieOptions.
+         Headers set on Astro.response do not survive Astro.redirect(). */
+      Astro.cookies.set(
+        SESSION_COOKIE_NAME,
+        token,
+        sessionCookieOptions(Astro.url.protocol === 'https:'),
+      );
+      return Astro.redirect(next, 302);
+    }
+
+    // Deliberately vague: confirming that a password merely "exists" or hinting
+    // at length would help someone guessing.
+    error = 'That password is not right.';
+  } catch (err) {
+    console.error(err);
+    error =
+      'The admin panel is not configured yet. ADMIN_PASSWORD_HASH and SESSION_SECRET need to be set.';
+  }
+}
+---
+
+<AdminLayout title="Sign in" showNav={false}>
+  <div class="mx-auto max-w-sm py-10">
+    <h1 class="text-display-md">Mess Junk admin</h1>
+    <p class="mt-2 text-body-md text-ink-soft">
+      Sign in to edit workshops, dates, prices and the FAQ.
+    </p>
+
+    <form method="POST" class="mt-8">
+      {
+        error && (
+          <p
+            role="alert"
+            class="mb-5 rounded-card-sm border border-error/40 bg-error/5 px-4 py-3 text-body-sm text-error"
+          >
+            {error}
+          </p>
+        )
+      }
+
+      <label class="field-label" for="password">Password</label>
+      <input
+        id="password"
+        name="password"
+        type="password"
+        required
+        autocomplete="current-password"
+        autofocus
+        class="field"
+      />
+
+      <button type="submit" class="btn btn-primary mt-5 w-full">Sign in</button>
+    </form>
+
+    <p class="mt-6 text-body-sm text-ink-soft">
+      Forgotten it? It cannot be recovered — a new one has to be generated and
+      set in the hosting dashboard.
+    </p>
+  </div>
+</AdminLayout>

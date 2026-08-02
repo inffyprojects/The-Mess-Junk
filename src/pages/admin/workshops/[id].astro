@@ -1,0 +1,337 @@
+---
+/**
+ * Create or edit a workshop.
+ *
+ * One route handles both: `/admin/workshops/new/` creates, `/admin/workshops/12/`
+ * edits. Same form, same validation, same save path — two nearly-identical
+ * templates would drift apart within a month.
+ *
+ * Plain form POST, no JavaScript. Slower to feel than a fetch-based save, but
+ * it cannot half-submit, cannot lose the editor's typing to a JS error, and
+ * works on any device the studio happens to own.
+ */
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import AdminField from '../../../components/admin/AdminField.astro';
+import Icon from '../../../components/Icon.astro';
+import { requireSession, str, int, bool, slugify, friendlyDbError } from '../../../lib/admin';
+import {
+  getWorkshop,
+  createWorkshop,
+  updateWorkshop,
+  deleteWorkshop,
+  CATEGORIES,
+  CATEGORY_LABELS,
+  type Category,
+  type Workshop,
+} from '../../../lib/db';
+import { triggerRebuild } from '../../../lib/deploy';
+import { SHOTS } from '../../../data/shots';
+
+const denied = await requireSession(Astro);
+if (denied) return denied;
+
+const idParam = Astro.params.id!;
+const isNew = idParam === 'new';
+const id = isNew ? null : Number(idParam);
+
+if (!isNew && !Number.isInteger(id)) return Astro.redirect('/admin/workshops/', 302);
+
+let error = '';
+let record: Workshop | null = null;
+
+/* Values shown in the form. On a failed save these come from the submission,
+   not the database, so the editor never loses what they typed. */
+let form = {
+  title: '',
+  summary: '',
+  categories: [] as string[],
+  priceFrom: '',
+  ageGroup: 'All ages',
+  duration: '2 hours',
+  minParticipants: '',
+  shot: 'ws-pottery',
+  takeaway: '',
+  body: '',
+  order: '50',
+  draft: false,
+};
+
+if (!isNew) {
+  record = await getWorkshop(id!);
+  if (!record) return Astro.redirect('/admin/workshops/', 302);
+
+  form = {
+    title: record.title,
+    summary: record.summary,
+    categories: record.categories,
+    priceFrom: String(record.priceFrom),
+    ageGroup: record.ageGroup,
+    duration: record.duration,
+    minParticipants: record.minParticipants === null ? '' : String(record.minParticipants),
+    shot: record.shot,
+    takeaway: record.takeaway ?? '',
+    body: record.body,
+    order: String(record.order),
+    draft: record.draft,
+  };
+}
+
+if (Astro.request.method === 'POST') {
+  const data = await Astro.request.formData();
+
+  if (str(data, 'intent') === 'delete' && !isNew) {
+    try {
+      await deleteWorkshop(id!);
+      await triggerRebuild();
+      return Astro.redirect('/admin/workshops/?deleted=1', 302);
+    } catch (err) {
+      error = friendlyDbError(err);
+    }
+  } else {
+    form = {
+      title: str(data, 'title'),
+      summary: str(data, 'summary'),
+      categories: data.getAll('categories').map(String),
+      priceFrom: str(data, 'priceFrom'),
+      ageGroup: str(data, 'ageGroup'),
+      duration: str(data, 'duration'),
+      minParticipants: str(data, 'minParticipants'),
+      shot: str(data, 'shot'),
+      takeaway: str(data, 'takeaway'),
+      body: str(data, 'body'),
+      order: str(data, 'order'),
+      draft: bool(data, 'draft'),
+    };
+
+    /* Checked here as well as in the schema so the editor gets a sentence
+       instead of a constraint name. The schema remains the real guarantee. */
+    if (!form.title) error = 'Give the workshop a title.';
+    else if (!form.summary) error = 'Add a one-line summary — it shows on the card.';
+    else if (form.categories.length === 0) error = 'Pick at least one category.';
+    else if (!int(data, 'priceFrom') || int(data, 'priceFrom')! < 1)
+      error = 'Enter a starting price above zero, digits only.';
+
+    if (!error) {
+      const payload = {
+        slug: record?.slug ?? slugify(form.title),
+        title: form.title,
+        summary: form.summary,
+        categories: form.categories as Category[],
+        priceFrom: int(data, 'priceFrom')!,
+        ageGroup: form.ageGroup || 'All ages',
+        duration: form.duration || '2 hours',
+        minParticipants: int(data, 'minParticipants'),
+        shot: form.shot,
+        takeaway: form.takeaway || null,
+        body: form.body,
+        order: int(data, 'order') ?? 50,
+        draft: form.draft,
+      };
+
+      try {
+        if (isNew) await createWorkshop(payload);
+        else await updateWorkshop(id!, payload);
+        await triggerRebuild();
+        return Astro.redirect('/admin/workshops/?saved=1', 302);
+      } catch (err) {
+        error = friendlyDbError(err);
+      }
+    }
+  }
+}
+
+/* Only the slots that make sense for a workshop card, so the editor is picking
+   from a short list rather than typing an id from memory. */
+const shotOptions = Object.values(SHOTS)
+  .filter((s) => s.id.startsWith('ws-') || s.id.startsWith('cat-'))
+  .map((s) => s.id);
+---
+
+<AdminLayout title={isNew ? 'New workshop' : form.title || 'Edit workshop'}>
+  <a
+    href="/admin/workshops/"
+    class="inline-flex items-center gap-1.5 text-body-sm text-ink-soft hover:text-cobalt"
+  >
+    <Icon name="chevron-right" size={15} class="rotate-180" />
+    All workshops
+  </a>
+
+  <h1 class="mt-3 text-display-md">{isNew ? 'Add a workshop' : 'Edit workshop'}</h1>
+
+  {
+    error && (
+      <p
+        role="alert"
+        class="mt-6 rounded-card-sm border border-error/40 bg-error/5 px-4 py-3 text-body-sm text-error"
+      >
+        {error}
+      </p>
+    )
+  }
+
+  <form method="POST" class="mt-8 max-w-2xl space-y-6">
+    <AdminField
+      label="Title"
+      name="title"
+      required
+      hint="The name on the card. Short and distinctive."
+    >
+      <input id="title" name="title" class="field" value={form.title} required />
+    </AdminField>
+
+    <AdminField
+      label="Summary"
+      name="summary"
+      required
+      hint="One line on the card, around 90 characters. Say what the person will do."
+    >
+      <input id="summary" name="summary" class="field" value={form.summary} required />
+    </AdminField>
+
+    <fieldset>
+      <legend class="field-label">Categories <span class="text-error">*</span></legend>
+      <p class="mb-2 text-body-sm text-ink-soft">
+        Which filter tabs this appears under. Most workshops fit two or three.
+      </p>
+      <div class="flex flex-wrap gap-2">
+        {
+          CATEGORIES.map((c) => (
+            <label class="inline-flex cursor-pointer items-center gap-2 rounded-pill border border-line bg-white px-3.5 py-2 text-body-sm has-[:checked]:border-cobalt has-[:checked]:bg-cobalt-05 has-[:checked]:text-cobalt">
+              <input
+                type="checkbox"
+                name="categories"
+                value={c}
+                checked={form.categories.includes(c)}
+                class="h-4 w-4 accent-cobalt"
+              />
+              {CATEGORY_LABELS[c]}
+            </label>
+          ))
+        }
+      </div>
+    </fieldset>
+
+    <div class="grid gap-6 sm:grid-cols-2">
+      <AdminField
+        label="Starting price"
+        name="priceFrom"
+        required
+        hint="Rupees, digits only. Shows as 'From ₹1,200'."
+      >
+        <input
+          id="priceFrom"
+          name="priceFrom"
+          type="number"
+          min="1"
+          step="1"
+          class="field"
+          value={form.priceFrom}
+          required
+        />
+      </AdminField>
+
+      <AdminField
+        label="Minimum participants"
+        name="minParticipants"
+        hint="Only for private formats. Leave blank for public sessions."
+      >
+        <input
+          id="minParticipants"
+          name="minParticipants"
+          type="number"
+          min="1"
+          step="1"
+          class="field"
+          value={form.minParticipants}
+        />
+      </AdminField>
+
+      <AdminField label="Age group" name="ageGroup" hint="e.g. '8+ yrs', '13–18 yrs', 'All ages'.">
+        <input id="ageGroup" name="ageGroup" class="field" value={form.ageGroup} />
+      </AdminField>
+
+      <AdminField label="Duration" name="duration" hint="e.g. '2 hours', '1.5 hours'.">
+        <input id="duration" name="duration" class="field" value={form.duration} />
+      </AdminField>
+    </div>
+
+    <AdminField
+      label="Takeaway"
+      name="takeaway"
+      hint="What they carry home. Leave blank if nothing physical does."
+    >
+      <input id="takeaway" name="takeaway" class="field" value={form.takeaway} />
+    </AdminField>
+
+    <div class="grid gap-6 sm:grid-cols-2">
+      <AdminField
+        label="Card image slot"
+        name="shot"
+        hint="Which designed panel this card uses. Replaced by a real photo later."
+      >
+        <select id="shot" name="shot" class="field">
+          {shotOptions.map((s) => <option value={s} selected={form.shot === s}>{s}</option>)}
+        </select>
+      </AdminField>
+
+      <AdminField
+        label="Sort order"
+        name="order"
+        hint="Lower numbers first. 10 = popular, 50 = normal, 90 = niche."
+      >
+        <input id="order" name="order" type="number" step="1" class="field" value={form.order} />
+      </AdminField>
+    </div>
+
+    <AdminField
+      label="Description"
+      name="body"
+      hint="Two or three short paragraphs. What happens in the session and what it feels like."
+    >
+      <textarea id="body" name="body" rows="8" class="field resize-y">{form.body}</textarea>
+    </AdminField>
+
+    <label class="flex cursor-pointer items-start gap-3 rounded-card-sm border border-line bg-white p-4">
+      <input type="checkbox" name="draft" checked={form.draft} class="mt-1 h-4 w-4 accent-cobalt" />
+      <span>
+        <span class="block font-semibold">Hide from the website</span>
+        <span class="mt-0.5 block text-body-sm text-ink-soft">
+          Keeps the workshop here but removes it from the site. Use this for seasonal
+          sessions instead of deleting them.
+        </span>
+      </span>
+    </label>
+
+    <div class="flex flex-wrap items-center gap-3 border-t border-line pt-6">
+      <button type="submit" class="btn btn-primary">
+        {isNew ? 'Create workshop' : 'Save changes'}
+      </button>
+      <a href="/admin/workshops/" class="btn btn-ghost">Cancel</a>
+    </div>
+  </form>
+
+  {
+    !isNew && (
+      <form
+        method="POST"
+        class="mt-10 max-w-2xl rounded-card border border-error/30 bg-error/5 p-5"
+        onsubmit="return confirm('Delete this workshop permanently? Consider hiding it instead.')"
+      >
+        <input type="hidden" name="intent" value="delete" />
+        <h2 class="font-display text-[1.05rem] font-bold">Delete this workshop</h2>
+        <p class="mt-1.5 max-w-prose text-body-sm text-ink-soft">
+          Permanent. If you only want it off the site for now, tick "Hide from the
+          website" above instead — that keeps it for next season.
+        </p>
+        <button
+          type="submit"
+          class="btn mt-4 !min-h-[2.75rem] !border-error !bg-transparent !px-4 text-body-sm !text-error hover:!bg-error hover:!text-white"
+        >
+          Delete permanently
+        </button>
+      </form>
+    )
+  }
+</AdminLayout>

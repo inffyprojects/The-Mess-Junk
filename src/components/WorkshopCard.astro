@@ -11,20 +11,20 @@
  *     (Q24) — so this card links to the enquiry form, pre-filled, and never
  *     to a cart.
  */
-import type { CollectionEntry } from 'astro:content';
+import type { Workshop } from '../lib/db';
 import ShotPanel from './ShotPanel.astro';
 import Icon from './Icon.astro';
 import type { ShotId } from '../data/shots';
 import { formatPrice } from '../data/site';
 
 interface Props {
-  workshop: CollectionEntry<'workshops'>;
+  workshop: Workshop;
   /** Stagger index within a grid — 70ms apart, per §8 */
   index?: number;
 }
 
 const { workshop, index = 0 } = Astro.props;
-const w = workshop.data;
+const w = workshop;
 
 /* Pre-fills the enquiry form's Event type with this workshop, so an enquiry
    arrives already saying which session the visitor wants. */

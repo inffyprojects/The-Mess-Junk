@@ -14,7 +14,7 @@
  * The map is a plain iframe embed: no Maps JS SDK and no API key, so there is
  * no billing account attached to this site.
  */
-import { getCollection } from 'astro:content';
+import { getWorkshops, getUpcomingDates } from '../lib/db';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PageHero from '../components/PageHero.astro';
 import Icon from '../components/Icon.astro';
@@ -23,18 +23,13 @@ import Grain from '../components/motifs/Grain.astro';
 import Sparkle from '../components/motifs/Sparkle.astro';
 import { site, whatsappLink, formatDate, formatPrice } from '../data/site';
 
-const workshops = (await getCollection('workshops', ({ data }) => !data.draft)).sort(
-  (a, b) => a.data.order - b.data.order,
-);
+const workshops = await getWorkshops();
 
-/* Upcoming sessions only. Filtering at build time means a stale date cannot
-   linger on the page — but it also means the list shrinks between deploys, so
-   the README tells the client to top this file up. A month with nothing left
-   in it renders the honest empty state further down rather than an empty grid. */
+/* Upcoming sessions only. Filtered in SQL against the database's own clock, so
+   a stale session cannot appear because the build machine's timezone differs.
+   `today` is still needed for the form's min= attribute. */
 const today = new Date().toISOString().slice(0, 10);
-const dates = (await getCollection('dates'))
-  .filter((d) => d.data.date >= today)
-  .sort((a, b) => a.data.date.localeCompare(b.data.date));
+const dates = await getUpcomingDates();
 
 /* Event types — the brief's "event type" field. Mirrors the pricing tiers and
    the workshop list so an enquiry arrives already categorised. */
@@ -102,7 +97,7 @@ const mapSrc =
         dates.length > 0 ? (
           <ul class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {dates.map((d, i) => {
-              const s = d.data;
+              const s = d;
               const soldOut = s.seatsLeft === 0;
               /* Written as `threshold >= seatsLeft` rather than
                  `seatsLeft <= threshold`: inside a JSX expression the Astro
@@ -250,7 +245,7 @@ const mapSrc =
               <label class="field-label" for="workshop">Workshop</label>
               <select id="workshop" name="workshop" class="field">
                 <option value="">Not sure yet — help me pick</option>
-                {workshops.map((w) => <option value={w.data.title}>{w.data.title}</option>)}
+                {workshops.map((w) => <option value={w.title}>{w.title}</option>)}
               </select>
             </div>
 

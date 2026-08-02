@@ -5,12 +5,15 @@ dist/
 # dependencies
 node_modules/
 
-# local secrets — never commit. Cloudflare reads these from the dashboard.
-.dev.vars
+# local secrets — never commit. Vercel reads these from its dashboard.
 .env
+.env.local
 .env.production
 
-# wrangler / cloudflare
+# vercel build output
+.vercel/
+
+# leftover from the earlier Cloudflare setup; harmless if the folder reappears
 .wrangler/
 
 # editor + OS

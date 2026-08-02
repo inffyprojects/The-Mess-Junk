@@ -1,19 +1,11 @@
 /**
- * Enquiry + newsletter delivery logic, shared by both hosting targets.
+ * Enquiry + newsletter delivery.
  *
- * The site can be deployed to Cloudflare Pages or to Vercel. Each platform has
- * its own function signature and its own directory convention:
+ * Validation, sanitising, email composition, the Resend call and the Google
+ * Sheet fallback all live here. The thin route handlers in src/pages/api/
+ * only unwrap the request and write the response.
  *
- *   Cloudflare Pages  →  /functions/api/contact.ts   (Workers runtime)
- *   Vercel            →  /api/contact.ts             (Node runtime)
- *
- * Both are thin wrappers that unwrap the request, call into this file, and
- * write the response back in their platform's idiom. All the actual behaviour —
- * validation, sanitising, email composition, the Resend call and the Google
- * Sheet fallback — lives here exactly once, so the two hosts cannot drift
- * apart.
- *
- * This module depends only on `fetch`, which both runtimes provide natively.
+ * Depends on nothing but `fetch`, so it runs unchanged wherever Astro puts it.
  */
 
 export interface DeliveryEnv {

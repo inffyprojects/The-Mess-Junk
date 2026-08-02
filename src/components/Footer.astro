@@ -7,7 +7,7 @@
  *
  * Also carries the newsletter signup, which the client ticked in the features
  * list (questionnaire §9). It posts to the same Pages Function pattern as the
- * enquiry form — see functions/api/newsletter.ts.
+ * enquiry form — see src/pages/api/newsletter.ts.
  */
 import Logo from './Logo.astro';
 import Icon from './Icon.astro';
@@ -164,7 +164,7 @@ import { nav, site, whatsappLink } from '../data/site';
 </footer>
 
 <script>
-  /* Newsletter signup — posts to the Cloudflare Pages Function. Progressive:
+  /* Newsletter signup — posts to the Astro API route. Progressive:
      if the fetch fails for any reason we say so plainly rather than silently
      swallowing the address. */
   const form = document.getElementById('newsletter-form') as HTMLFormElement | null;

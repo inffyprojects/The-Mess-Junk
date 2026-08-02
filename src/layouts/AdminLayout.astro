@@ -1,0 +1,122 @@
+---
+/**
+ * Admin panel shell.
+ *
+ * Uses the site's own design tokens so the panel does not feel like a
+ * different product, but stays deliberately plainer than the public site — no
+ * blobs, no grain, no scroll animation. This is a tool for getting work done,
+ * and decoration would be in the way.
+ *
+ * Server-rendered on every admin route, so it is never cached and never
+ * prerendered. `noindex` because an admin panel has no business in search
+ * results even though it is behind a password.
+ */
+import '@fontsource-variable/bricolage-grotesque';
+import '@fontsource-variable/inter';
+import '../styles/global.css';
+import Logo from '../components/Logo.astro';
+import Icon from '../components/Icon.astro';
+
+interface Props {
+  title: string;
+  /** Hidden on the login screen, where there is no session to sign out of. */
+  showNav?: boolean;
+}
+
+const { title, showNav = true } = Astro.props;
+
+const nav = [
+  { label: 'Workshops', href: '/admin/workshops/' },
+  { label: 'Upcoming dates', href: '/admin/dates/' },
+  { label: 'Pricing', href: '/admin/pricing/' },
+  { label: 'FAQ', href: '/admin/faq/' },
+];
+
+const path = Astro.url.pathname;
+---
+
+<!doctype html>
+<html lang="en-IN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{title} · Mess Junk admin</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+
+  <body class="min-h-screen bg-off-white">
+    {
+      showNav && (
+        <header class="border-b border-line bg-white">
+          <div class="shell flex h-16 items-center justify-between gap-6">
+            <a href="/admin/" class="shrink-0">
+              <Logo class="text-[1.15rem]" />
+            </a>
+
+            <nav aria-label="Admin sections" class="hidden gap-1 md:flex">
+              {nav.map((item) => (
+                <a
+                  href={item.href}
+                  aria-current={path.startsWith(item.href) ? 'page' : undefined}
+                  class:list={[
+                    'inline-flex h-10 items-center rounded-pill px-3.5 text-body-sm font-medium transition-colors',
+                    path.startsWith(item.href)
+                      ? 'bg-cobalt-05 text-cobalt'
+                      : 'text-ink hover:bg-cobalt-05 hover:text-cobalt',
+                  ]}
+                >
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+
+            <div class="flex items-center gap-2">
+              <a
+                href="/"
+                target="_blank"
+                rel="noopener"
+                class="hidden text-body-sm text-ink-soft hover:text-cobalt sm:inline-flex sm:items-center sm:gap-1.5"
+              >
+                View site
+                <Icon name="arrow-up-right" size={15} />
+              </a>
+              <form method="POST" action="/admin/logout/">
+                <button
+                  type="submit"
+                  class="inline-flex h-10 items-center rounded-pill border border-line px-3.5 text-body-sm font-medium text-ink transition-colors hover:border-cobalt hover:text-cobalt"
+                >
+                  Sign out
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Mobile section nav -->
+          <nav
+            aria-label="Admin sections"
+            class="shell -mx-[var(--gutter)] flex gap-1 overflow-x-auto px-[var(--gutter)] pb-2 md:hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {nav.map((item) => (
+              <a
+                href={item.href}
+                class:list={[
+                  'inline-flex h-9 shrink-0 items-center rounded-pill px-3 text-body-sm font-medium',
+                  path.startsWith(item.href)
+                    ? 'bg-cobalt text-white'
+                    : 'border border-line bg-white text-ink',
+                ]}
+              >
+                {item.label}
+              </a>
+            ))}
+          </nav>
+        </header>
+      )
+    }
+
+    <main class="shell py-10">
+      <slot />
+    </main>
+  </body>
+</html>

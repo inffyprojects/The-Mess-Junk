@@ -12,7 +12,7 @@
  * view can be linked to — which is how the home page's category strip deep
  * links in.
  */
-import { getCollection } from 'astro:content';
+import { getWorkshops, CATEGORIES, CATEGORY_LABELS } from '../../lib/db';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PageHero from '../../components/PageHero.astro';
 import WorkshopCard from '../../components/WorkshopCard.astro';
@@ -20,17 +20,15 @@ import CtaBand from '../../components/CtaBand.astro';
 import Icon from '../../components/Icon.astro';
 import Blob from '../../components/motifs/Blob.astro';
 import Grain from '../../components/motifs/Grain.astro';
-import { CATEGORIES, CATEGORY_LABELS } from '../../content.config';
 import { site, whatsappLink, formatPrice } from '../../data/site';
 
-const workshops = (await getCollection('workshops', ({ data }) => !data.draft)).sort(
-  (a, b) => a.data.order - b.data.order,
-);
+/* Read at build time — this page is prerendered. */
+const workshops = await getWorkshops();
 
 /* Only offer a tab if something actually sits behind it — an empty filter tab
    is a dead end and reads as broken. */
 const counts = Object.fromEntries(
-  CATEGORIES.map((c) => [c, workshops.filter((w) => w.data.categories.includes(c)).length]),
+  CATEGORIES.map((c) => [c, workshops.filter((w) => w.categories.includes(c)).length]),
 ) as Record<(typeof CATEGORIES)[number], number>;
 
 const tabs = [
@@ -42,7 +40,7 @@ const tabs = [
   })),
 ];
 
-const cheapest = Math.min(...workshops.map((w) => w.data.priceFrom));
+const cheapest = workshops.length ? Math.min(...workshops.map((w) => w.priceFrom)) : 0;
 ---
 
 <BaseLayout
@@ -116,7 +114,7 @@ const cheapest = Math.min(...workshops.map((w) => w.data.priceFrom));
       >
         {
           workshops.map((w, i) => (
-            <li data-categories={w.data.categories.join(' ')} class="flex">
+            <li data-categories={w.categories.join(' ')} class="flex">
               <WorkshopCard workshop={w} index={i} />
             </li>
           ))

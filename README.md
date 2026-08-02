@@ -3,26 +3,28 @@
 Marketing site for The Mess Junk, a creative art & craft workshop studio in
 Vadodara, Gujarat.
 
-**Astro + Tailwind CSS**, deployed as static files with two serverless functions
-for the enquiry form and newsletter signup. Runs on **Cloudflare Pages** or
-**Vercel** — both are wired up. There is no database and no CMS: all content is
-Markdown and JSON files in this repo.
+**Astro + Tailwind CSS** on **Vercel**, with content in a **Neon Postgres**
+database and a built-in admin panel at `/admin`.
 
-Running cost at expected traffic: **₹0/month**, plus whatever the domain costs.
+The public pages are prerendered from the database at build time, so visitors
+get static HTML off the CDN and never touch Postgres — no cold starts, no query
+on the critical path. Saving in the admin panel triggers a rebuild, and the
+change is live in about a minute.
 
-> **Read [BUILD_NOTES.md](BUILD_NOTES.md) first** if you are the client. It lists
-> the decisions taken during the build that need your confirmation — including
-> why the site launches without photography.
+> **New to this project? Start with [SETUP.md](SETUP.md)** — the one-time steps
+> to create the database, migrate the content and set the admin password.
+>
+> [BUILD_NOTES.md](BUILD_NOTES.md) records the design decisions that still need
+> the client's confirmation, including why the site launches without photography.
 
 ---
 
 ## Contents
 
 - [Running it locally](#running-it-locally)
-- [Editing content](#editing-content) — workshops, prices, dates, FAQ
-- [Deploying to Cloudflare Pages](#deploying-to-cloudflare-pages)
-- [Deploying to Vercel instead](#deploying-to-vercel-instead)
-- [Setting the RESEND_API_KEY](#setting-the-resend_api_key)
+- [Editing content](#editing-content) — via the admin panel
+- [How the pieces fit together](#how-the-pieces-fit-together)
+- [Environment variables](#environment-variables)
 - [Swapping in the real logo](#swapping-in-the-real-logo)
 - [Adding real photography](#adding-real-photography) — including the shot list
 - [Project structure](#project-structure)
@@ -31,343 +33,111 @@ Running cost at expected traffic: **₹0/month**, plus whatever the domain costs
 
 ## Running it locally
 
-Requires **Node 20 or newer**.
+Requires **Node 20 or newer** and a `DATABASE_URL` (see [SETUP.md](SETUP.md)).
 
 ```bash
 npm install
-npm run dev        # http://localhost:4321
+cp .env.example .env     # then fill in at least DATABASE_URL
+npm run dev              # http://localhost:4321
 ```
+
+The dev server reads the same Neon database as production, so be aware that
+edits you make through a local `/admin` are real.
 
 Other commands:
 
 ```bash
-npm run build      # production build into dist/
-npm run preview    # serve the built site
-npm run deploy     # build, then push to Cloudflare Pages
+npm run build        # production build (needs DATABASE_URL)
+npm run preview      # serve the built site
+npm run db:verify    # run the schema + queries against a real Postgres engine
+npm run db:migrate   # copy _content-backup/ files into Neon (one-time)
+npm run admin:hash   # generate ADMIN_PASSWORD_HASH + SESSION_SECRET
 ```
 
-To test the contact form and newsletter locally you need the Workers runtime,
-because they run as Cloudflare Functions rather than as part of the Astro app:
-
-```bash
-cp .dev.vars.example .dev.vars     # then add your Resend key
-npm run build
-npx wrangler pages dev dist
-```
-
-`npm run dev` alone serves the pages fine — form submissions will just fail, and
-the form falls back to offering a pre-filled WhatsApp link, which is the same
-thing a visitor sees in production if email is misconfigured.
+`npm run db:verify` is worth knowing about: it applies `db/schema.sql` to an
+in-process Postgres (PGlite) and exercises every constraint and query. It needs
+no database and no network, so it is the fastest way to check a schema change
+before touching Neon.
 
 ---
 
 ## Editing content
 
-Everything the studio will realistically want to change lives in
-`src/content/`. Edit the file, commit, push — Cloudflare rebuilds and deploys
-automatically, usually within a minute.
+Everything is at **`/admin`** — workshops, upcoming dates, pricing tiers and the
+FAQ. Sign in with the shared password (see [SETUP.md](SETUP.md) step 4).
 
-Every field is validated on build. If you mistype a category or leave out a
-price, the build stops with a readable error naming the file — it will not
-deploy a broken card.
+Each save writes to Neon and then pings a Vercel Deploy Hook, so the public site
+rebuilds itself. Expect about a minute between saving and seeing the change.
 
-### Adding or editing a workshop
-
-One Markdown file per workshop in **`src/content/workshops/`**. Copy an existing
-file, rename it (the filename becomes the URL slug), and edit.
-
-```markdown
----
-title: Pottery & Wheel Throwing
-summary: Centre your first pot on the wheel — messy hands guaranteed, no experience needed.
-categories: ['teens', 'adults', 'private-custom']   # see valid values below
-priceFrom: 1200          # rupees, digits only — renders as "From ₹1,200"
-ageGroup: '14+ yrs'      # free text, shown as a chip
-duration: '2.5 hours'    # free text, shown as a chip
-minParticipants: 20      # optional — omit unless it's a private-only format
-shot: 'ws-pottery'       # an id from src/data/shots.ts
-takeaway: 'Two pieces, glazed and fired — collect them a fortnight later.'
-order: 10                # lower numbers appear first
-draft: false             # true hides it without deleting the file
----
-
-Two or three short paragraphs of body copy go here.
-```
-
-**Valid `categories`** (these are the filter tabs on `/workshops`) —
-`kids`, `teens`, `adults`, `corporate-colleges`, `private-custom`, `seasonal`.
-A workshop can be in several. A tab with nothing behind it is hidden
-automatically.
-
-To **remove** a workshop, set `draft: true` rather than deleting it — that keeps
-the history and lets you bring it back for next season.
-
-### Changing prices
-
-Two places, depending on which price you mean:
-
-- **A workshop's "From ₹—" figure** → `priceFrom` in that workshop's Markdown
-  file (above).
-- **The three tiers on the Pricing page** → **`src/content/pricing/tiers.json`**.
-  `price` is free text so it can read `"₹499 – ₹2,500"` or `"Custom"` or
-  `"Let's talk"`. `includes` is the bulleted list. `featured: true` visually
-  lifts one tier — keep it on exactly one.
-
-The "Sessions from ₹350" line on the Home page and the Workshops page is
-calculated from the cheapest `priceFrom` across all workshops. It updates itself;
-do not hardcode it.
-
-### Adding workshop dates (the availability checker)
-
-**`src/content/dates/upcoming.json`** — this drives the "Check a date" picker on
-the Contact page.
-
-The file holds a `dates` array — one object per session. (`tiers.json` follows
-the same pattern with a `tiers` array.) This is the shape the CMS reads and
-writes; a bare top-level array also still works if you prefer editing by hand.
-
-```json
-{
-  "dates": [
-    {
-      "id": "2026-08-08-pottery",
-      "date": "2026-08-08",
-      "time": "11:00 AM – 1:30 PM",
-      "workshop": "Pottery & Wheel Throwing",
-      "seatsTotal": 8,
-      "seatsLeft": 3,
-      "priceFrom": 1200
-    }
-  ]
-}
-```
-
-- `date` must be `YYYY-MM-DD`. **Dates in the past are hidden automatically** on
-  the next build, so this list only ever shrinks — top it up regularly.
-- `seatsLeft: 0` renders the session as "Full" and disables selection.
-- When `seatsLeft` drops to a quarter of `seatsTotal` (minimum 2), the card
-  switches to an urgent "N left" badge on its own.
-- Make `workshop` match a workshop `title` exactly and selecting the date will
-  pre-select that workshop in the enquiry form too. If it does not match, the
-  date still works — the workshop dropdown just stays on "Not sure yet".
-- `id` just has to be unique. The `date-workshop` convention keeps it readable.
-
-**If this file empties**, the Contact page shows a designed "the next dates are
-being set" state rather than an empty grid. Nothing breaks — but nobody can pick
-a date, so keep it stocked.
-
-### Editing the FAQ
-
-One Markdown file per question in **`src/content/faq/`**. The body is the answer;
-keep it to two or three sentences, per the design brief.
-
-```markdown
----
-question: 'How do I book a workshop?'
-group: 'booking'    # booking | pricing | expect
-order: 10
----
-
-Send us a WhatsApp message or fill in the enquiry form…
-```
-
-The three `group` values map to the page's three sections — Booking &
-availability, Pricing & group size, What to expect. Questions are also emitted as
-FAQ structured data for Google, so a well-written answer here can show up
-directly in search results.
-
-### Phone numbers, email, address, social links
-
-All in one file: **`src/data/site.ts`**. Changing `primaryPhone` and
-`whatsappNumber` there updates every WhatsApp CTA on the site at once.
-
----
-
-## Content management (CMS)
-
-The site has a browser-based admin panel at **`/admin`** powered by
-[Decap CMS](https://decapcms.org/). It lets the team add, edit and remove
-workshops, prices, FAQ entries and upcoming dates without touching code. Changes
-are committed to Git and the site rebuilds automatically.
-
-The admin panel edits the exact same Markdown and JSON files under `src/content/`
-that this README documents above. Nothing about the build or the schemas changes.
-
-See **`Docs/CLIENT_GUIDE.md`** for the team-facing guide.
-
-### Setting up CMS authentication
-
-The CMS authenticates via GitHub OAuth. You need a GitHub OAuth App:
-
-1. Go to **GitHub > Settings > Developer settings > OAuth Apps > New OAuth App**.
-2. Set the **Authorization callback URL** to
-   `https://yourdomain.in/api/callback` (or your Vercel/Cloudflare preview URL).
-3. Copy the **Client ID** and generate a **Client Secret**.
-4. Add both to your host's environment variables:
-
-   | Name | Value |
-   |---|---|
-   | `GITHUB_OAUTH_CLIENT_ID` | The client ID from step 3 |
-   | `GITHUB_OAUTH_CLIENT_SECRET` | The client secret from step 3 (**encrypt it**) |
-
-5. Redeploy. Go to `/admin` and log in with a GitHub account that has write
-   access to the repository.
-
-The OAuth proxy runs as two serverless functions (`/api/auth` and
-`/api/callback`), with adapters for both Cloudflare Pages and Vercel — the same
-pattern as the contact form. Logic lives once in `lib/oauth.ts`.
-
-### Architecture
-
-```
-public/admin/index.html     Decap CMS entry point (pinned to 3.3.3)
-public/admin/config.yml     collection + field definitions
-lib/oauth.ts                GitHub OAuth token exchange logic
-api/auth.ts                 Vercel adapter — redirects to GitHub authorize
-api/callback.ts             Vercel adapter — exchanges code for token
-functions/api/auth.ts       Cloudflare Pages adapter
-functions/api/callback.ts   Cloudflare Pages adapter
-```
-
-### Decisions
-
-- **Preview pane disabled.** The site's design uses custom tokens, motifs and
-  components that cannot be replicated in a generic preview iframe. Showing raw
-  unstyled Markdown would misrepresent the design. Editors see the live site
-  after each save (about a minute).
-
-- **Editorial workflow not enabled.** `publish_mode: editorial_workflow` turns
-  every save into a pull request, adding a review step before changes go live.
-  For a 3-person team that has never used Git, the extra step adds confusion
-  without a clear benefit — there is nobody to review the PR, and an accidental
-  publish is fixed by editing again. If the team grows or if someone is training
-  a new editor, enable it by adding `publish_mode: editorial_workflow` to
-  `public/admin/config.yml`.
-
-- **Media uploads go to `src/assets/photos/`.** This keeps images inside Astro's
-  build pipeline (Sharp, AVIF/WebP, `srcset`), preserving the mobile performance
-  budget from the design document. The alternative (`public/uploads/`) would be
-  simpler for the CMS but would bypass image optimisation entirely.
-
----
-
-## Deploying to Cloudflare Pages
-
-### First-time setup (Git integration — recommended)
-
-1. Push this repo to GitHub or GitLab.
-2. Cloudflare dashboard → **Workers & Pages** → **Create** → **Pages** →
-   **Connect to Git**, and pick the repo.
-3. Build settings:
-
-   | Setting | Value |
-   |---|---|
-   | Framework preset | **Astro** |
-   | Build command | `npm run build` |
-   | Build output directory | `dist` |
-   | Root directory | `/` (leave blank) |
-
-4. Under **Environment variables**, add `NODE_VERSION` = `20`.
-5. Deploy. Every push to the main branch redeploys automatically; pull requests
-   get their own preview URL.
-
-The `functions/` directory is picked up automatically — no extra configuration.
-`wrangler.toml` in the repo root holds the same settings for CLI deploys.
-
-### Manual deploys
-
-```bash
-npm run deploy      # = astro build && wrangler pages deploy dist
-```
-
-### Custom domain
-
-Buy the domain (`.in` via GoDaddy or the Cloudflare registrar), then in the Pages
-project → **Custom domains** → **Set up a domain**. Cloudflare handles the DNS
-record and the TLS certificate.
-
-**Nothing in this build hardcodes a domain** — every internal link is
-root-relative, so the site works identically on the `*.pages.dev` URL and on the
-custom domain, with no code change.
-
----
-
-## Deploying to Vercel instead
-
-The site works on Vercel too, with no code change. Import the repo — Vercel
-detects Astro, builds with `npm run build` and serves `dist`.
-
-The one thing to know: **`functions/` is Cloudflare-only and does nothing on
-Vercel.** Vercel reads serverless functions from the top-level **`api/`**
-directory instead. Both exist in this repo:
-
-```
-functions/api/contact.ts     Cloudflare Pages  (Workers runtime)
-api/contact.ts               Vercel            (Edge runtime)
-lib/enquiry.ts               the actual logic, shared by both
-```
-
-Each platform file is a ~20-line adapter; all the validation, sanitising,
-email composition and delivery lives once in `lib/enquiry.ts`, so the two hosts
-cannot drift apart. Whichever host you use, the front-end calls the same
-`/api/contact` URL and the unused directory is simply ignored.
-
-Set the same environment variables (below) under **Project → Settings →
-Environment Variables** in the Vercel dashboard, then redeploy.
-
----
-
-## Setting the RESEND_API_KEY
-
-The enquiry form and newsletter signup send email through
-[Resend](https://resend.com) (free tier: 3,000 emails/month). **Until this is
-set, the form cannot deliver** — it fails gracefully and offers the visitor a
-pre-filled WhatsApp link instead, but you will not get emails.
-
-1. Create a free Resend account and verify the login.
-2. **API Keys** → **Create API Key**. Sending permission is enough. Copy it —
-   Resend shows it once.
-3. Add the key to your host:
-
-   **Cloudflare Pages** — dashboard → **Workers & Pages** → **the-mess-junk** →
-   **Settings** → **Environment variables** → **Add variable**:
-
-   | Name | Value | Type |
-   |---|---|---|
-   | `RESEND_API_KEY` | `re_...` (the key from step 2) | **Secret** (encrypt it) |
-
-   **Vercel** — dashboard → your project → **Settings** → **Environment
-   Variables** → add `RESEND_API_KEY` with the same value, scoped to
-   Production (and Preview if you want preview deploys to send too).
-
-   On either host, add it to Preview as well if preview deployments should
-   send email.
-4. **Redeploy.** Environment variables are read at request time, but a redeploy
-   is the reliable way to be sure the change has taken.
-5. Send a test enquiry through the live form and confirm it arrives at
-   `themessjunk@gmail.com`.
-
-**Never put the key in the repo.** It belongs only in the Cloudflare dashboard,
-or in `.dev.vars` locally (which is gitignored).
-
-### Optional variables
-
-| Name | What it does |
+| Section | What it controls |
 |---|---|
-| `CONTACT_TO` | Sends enquiries somewhere other than `themessjunk@gmail.com`, without a code change. |
-| `SHEET_WEBHOOK_URL` | A Google Apps Script web-app URL. Used automatically if Resend is missing or failing, so enquiries land in a spreadsheet rather than being lost. |
-| `BUTTONDOWN_API_KEY` | Switches newsletter signups from "email the studio" to a real Buttondown list (free to 100 subscribers). |
-| `GITHUB_OAUTH_CLIENT_ID` | GitHub OAuth App client ID. Required for the Decap CMS admin panel at `/admin`. See "Content management (CMS)" below. |
-| `GITHUB_OAUTH_CLIENT_SECRET` | GitHub OAuth App client secret. Required for the CMS. **Must be set as a secret (encrypted).** |
+| **Workshops** | The cards on `/workshops` and the category strip on the home page. "Hide from the website" takes one off the site without deleting it — use that for seasonal sessions. |
+| **Upcoming dates** | The "Check a date" picker on `/contact`. Update *seats left* as bookings come in; set it to 0 to show a session as Full. Past dates disappear on their own. |
+| **Pricing** | The cards on `/pricing`. Mark exactly one tier as featured. |
+| **FAQ** | Grouped into the three sections the page renders. Answers are also emitted as FAQ structured data, so a good answer can appear directly in Google results. |
 
-### Sending from your own domain
+The database enforces the rules that used to be checked at build time — a
+workshop must have at least one valid category, seats left cannot exceed seats
+total, prices must be positive. If a save is rejected, the panel explains why in
+plain language rather than showing a database error.
 
-Emails currently send from `onboarding@resend.dev` — Resend's shared address,
-which works on a fresh account with no setup. Once the domain is live, add it
-under **Domains** in Resend, add the DNS records it gives you (Cloudflare makes
-this a couple of clicks), then change `FROM` at the top of
-`functions/api/contact.ts` and `functions/api/newsletter.ts` to
-`The Mess Junk <hello@yourdomain.in>`.
+### Things that are still in code, not the database
+
+Deliberately, because they change once a year at most:
+
+- **Phone numbers, email, address, social links** → `src/data/site.ts`
+- **Image slots and the shot list** → `src/data/shots.ts`
+- **Page copy** (headlines, About page, the "how it works" steps) → the relevant
+  file in `src/pages/`
+
+---
+
+## How the pieces fit together
+
+```
+Editor saves in /admin
+      |
+      v
+  Neon Postgres  <--- read at build time by the public pages
+      |
+      v
+Deploy Hook -> Vercel rebuild -> static HTML on the CDN -> visitor
+```
+
+- **Public pages** (`/`, `/workshops`, `/pricing`, `/contact`, `/faq`, `/about`,
+  `/portfolio`) are prerendered. They query Neon during `astro build` and ship as
+  plain HTML.
+- **Admin pages** (`/admin/*`) set `export const prerender = false`, so they are
+  server-rendered on Vercel and read and write Neon per request.
+- **The enquiry form and newsletter** (`src/pages/api/contact.ts`,
+  `src/pages/api/newsletter.ts`) are Astro API routes, server-rendered by the
+  same function; their logic lives in `src/lib/enquiry.ts`. They must stay under
+  `src/pages/api` — a top-level `/api` directory is ignored once the Vercel
+  adapter is in use.
+
+This is why a content change needs a rebuild: visitors are served files, not
+database rows. That is the trade for zero cold starts and no database on the
+critical path.
+
+---
+
+## Environment variables
+
+Set these in Vercel → Settings → Environment Variables, and in a local `.env`
+for development. `.env.example` lists them all with comments.
+
+| Name | Required | What it does |
+|---|---|---|
+| `DATABASE_URL` | yes | Neon **pooled** connection string. Builds and the admin panel both need it. |
+| `ADMIN_PASSWORD_HASH` | yes | From `npm run admin:hash`. Without it the admin panel refuses to load rather than opening up. |
+| `SESSION_SECRET` | yes | Signs the admin session cookie. 32+ characters. |
+| `DEPLOY_HOOK_URL` | for auto-publish | Vercel Deploy Hook. Without it, saves still work but the site will not rebuild by itself. |
+| `RESEND_API_KEY` | for the contact form | [Resend](https://resend.com), free to 3,000 emails/month. |
+| `CONTACT_TO` | no | Overrides the enquiry inbox. |
+| `SHEET_WEBHOOK_URL` | no | Google Apps Script fallback if Resend fails. |
+| `BUTTONDOWN_API_KEY` | no | Sends newsletter signups to a list instead of an inbox. |
+
+Never commit any of these. `.env` is gitignored.
 
 ---
 
@@ -503,51 +273,40 @@ const pieces = [
 ## Project structure
 
 ```
-├── Docs/                        the original client brief + design document
-├── lib/
-│   ├── enquiry.ts               validation + email delivery (the real logic)
-│   └── oauth.ts                 GitHub OAuth token exchange for CMS login
-├── functions/api/               Cloudflare Pages adapters (ignored by Vercel)
-│   ├── contact.ts
-│   ├── newsletter.ts
-│   ├── auth.ts                  CMS OAuth redirect
-│   └── callback.ts             CMS OAuth callback
-├── api/                         Vercel adapters (ignored by Cloudflare)
-│   ├── contact.ts
-│   ├── newsletter.ts
-│   ├── auth.ts                  CMS OAuth redirect
-│   └── callback.ts             CMS OAuth callback
-├── public/
-│   ├── favicon.svg              splat mark on cobalt
-│   └── admin/                   Decap CMS (the content management panel)
-│       ├── index.html
-│       └── config.yml
+├── db/schema.sql                the Neon schema — run once, safe to re-run
 ├── scripts/
-│   └── fetch-images.mjs         stock-image sourcing (unused — see BUILD_NOTES §2)
+│   ├── verify-db.mjs            schema + query tests (PGlite, no network)
+│   ├── migrate-content.mjs      one-time: content files -> Neon
+│   └── hash-password.mjs        generates ADMIN_PASSWORD_HASH
 ├── src/
+│   ├── lib/
+│   │   ├── db.ts                ← every database query lives here
+│   │   ├── auth.ts              admin password hashing + session cookie
+│   │   ├── admin.ts             session guard + form helpers
+│   │   └── deploy.ts            rebuild trigger
+│   ├── pages/
+│   │   ├── admin/               ← the admin panel (server-rendered)
+│   │   │   ├── login.astro
+│   │   │   ├── index.astro      dashboard
+│   │   │   ├── workshops/       list + create/edit
+│   │   │   ├── dates/
+│   │   │   ├── pricing/
+│   │   │   └── faq/
+│   │   ├── api/                 contact + newsletter endpoints
+│   │   └── *.astro              public pages (prerendered from the database)
 │   ├── components/
 │   │   ├── motifs/              Blob, Grain, Sparkle, TapeCorner,
 │   │   │                        MarkerUnderline, SplatDot  (design doc §3.4)
 │   │   ├── Icon.astro           every icon on the site, one family (§3.5)
 │   │   ├── Logo.astro           interim wordmark — swap here (§3.3)
-│   │   ├── ShotPanel.astro      image slots + the "coming soon" treatment (§4)
-│   │   ├── Header / Footer / WhatsAppFloat
-│   │   └── WorkshopCard / PageHero / SectionHeading / CtaBand
-│   ├── content/                 ← EDIT CONTENT HERE
-│   │   ├── workshops/*.md
-│   │   ├── faq/*.md
-│   │   ├── pricing/tiers.json
-│   │   └── dates/upcoming.json
-│   ├── content.config.ts        schemas that validate the above
+│   │   └── ShotPanel.astro      image slots + "coming soon" treatment (§4)
 │   ├── data/
 │   │   ├── site.ts              ← phone, email, address, nav
-│   │   ├── shots.ts             image slot registry + shot list
-│   │   └── icons.ts
-│   ├── layouts/BaseLayout.astro
-│   ├── pages/                   one file per route
+│   │   └── shots.ts             image slot registry + shot list
+│   ├── layouts/
 │   └── styles/global.css        ← design tokens (§3.1) live here
-├── tailwind.config.mjs          tokens mapped to Tailwind (§3.1/§3.2)
-├── wrangler.toml                Cloudflare Pages config
+├── _content-backup/             the old Markdown/JSON, kept as a backup
+├── SETUP.md                     one-time database + admin setup
 └── BUILD_NOTES.md               decisions needing client sign-off
 ```
 

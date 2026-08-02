@@ -72,7 +72,11 @@ const PATHS: Record<string, string> = {
 };
 
 const isBrandGlyph = name === 'whatsapp';
-const a11y = label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': 'true' };
+/* `as const` keeps `role` narrowed to the literal 'img' — a plain string is
+   wider than the AriaRole union the SVG attribute type expects. */
+const a11y = label
+  ? ({ role: 'img', 'aria-label': label } as const)
+  : ({ 'aria-hidden': 'true' } as const);
 ---
 
 <svg

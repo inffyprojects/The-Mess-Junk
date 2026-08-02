@@ -1,0 +1,194 @@
+---
+/**
+ * Create or edit a scheduled session.
+ *
+ * The "seats left" field is the one people will come back to repeatedly, so it
+ * sits high in the form with a quick-set control beside it.
+ */
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import AdminField from '../../../components/admin/AdminField.astro';
+import Icon from '../../../components/Icon.astro';
+import { requireSession, str, int, friendlyDbError } from '../../../lib/admin';
+import { getDate, createDate, updateDate, deleteDate, getWorkshops, type WorkshopDate } from '../../../lib/db';
+import { triggerRebuild } from '../../../lib/deploy';
+
+const denied = await requireSession(Astro);
+if (denied) return denied;
+
+const idParam = Astro.params.id!;
+const isNew = idParam === 'new';
+const id = isNew ? null : Number(idParam);
+
+if (!isNew && !Number.isInteger(id)) return Astro.redirect('/admin/dates/', 302);
+
+let error = '';
+let record: WorkshopDate | null = null;
+
+let form = {
+  date: '',
+  time: '11:00 AM – 1:00 PM',
+  workshop: '',
+  seatsTotal: '12',
+  seatsLeft: '12',
+  priceFrom: '',
+};
+
+if (!isNew) {
+  record = await getDate(id!);
+  if (!record) return Astro.redirect('/admin/dates/', 302);
+  form = {
+    date: record.date,
+    time: record.time,
+    workshop: record.workshop,
+    seatsTotal: String(record.seatsTotal),
+    seatsLeft: String(record.seatsLeft),
+    priceFrom: record.priceFrom === null ? '' : String(record.priceFrom),
+  };
+}
+
+if (Astro.request.method === 'POST') {
+  const data = await Astro.request.formData();
+
+  if (str(data, 'intent') === 'delete' && !isNew) {
+    try {
+      await deleteDate(id!);
+      await triggerRebuild();
+      return Astro.redirect('/admin/dates/?deleted=1', 302);
+    } catch (err) {
+      error = friendlyDbError(err);
+    }
+  } else {
+    form = {
+      date: str(data, 'date'),
+      time: str(data, 'time'),
+      workshop: str(data, 'workshop'),
+      seatsTotal: str(data, 'seatsTotal'),
+      seatsLeft: str(data, 'seatsLeft'),
+      priceFrom: str(data, 'priceFrom'),
+    };
+
+    const total = int(data, 'seatsTotal');
+    const left = int(data, 'seatsLeft');
+
+    if (!form.date) error = 'Pick a date.';
+    else if (!form.workshop) error = 'Say which workshop is running.';
+    else if (!form.time) error = 'Add a time, e.g. "11:00 AM – 1:00 PM".';
+    else if (total === null || total < 1) error = 'Total seats must be at least 1.';
+    else if (left === null || left < 0) error = 'Seats left cannot be negative.';
+    else if (left > total) error = 'Seats left cannot be more than the total.';
+
+    if (!error) {
+      const payload = {
+        date: form.date,
+        time: form.time,
+        workshop: form.workshop,
+        seatsTotal: total!,
+        seatsLeft: left!,
+        priceFrom: int(data, 'priceFrom'),
+      };
+      try {
+        if (isNew) await createDate(payload);
+        else await updateDate(id!, payload);
+        await triggerRebuild();
+        return Astro.redirect('/admin/dates/?saved=1', 302);
+      } catch (err) {
+        error = friendlyDbError(err);
+      }
+    }
+  }
+}
+
+/* Offered as a datalist so the workshop name matches an existing title exactly
+   — that match is what pre-fills the enquiry form when someone picks a date. */
+let workshopTitles: string[] = [];
+try {
+  workshopTitles = (await getWorkshops()).map((w) => w.title);
+} catch {
+  /* The form still works with a free-typed name. */
+}
+---
+
+<AdminLayout title={isNew ? 'New date' : 'Edit date'}>
+  <a href="/admin/dates/" class="inline-flex items-center gap-1.5 text-body-sm text-ink-soft hover:text-cobalt">
+    <Icon name="chevron-right" size={15} class="rotate-180" />
+    All dates
+  </a>
+
+  <h1 class="mt-3 text-display-md">{isNew ? 'Add a date' : 'Edit date'}</h1>
+
+  {
+    error && (
+      <p role="alert" class="mt-6 rounded-card-sm border border-error/40 bg-error/5 px-4 py-3 text-body-sm text-error">
+        {error}
+      </p>
+    )
+  }
+
+  <form method="POST" class="mt-8 max-w-2xl space-y-6">
+    <div class="grid gap-6 sm:grid-cols-2">
+      <AdminField label="Date" name="date" required hint="The day the session runs.">
+        <input id="date" name="date" type="date" class="field" value={form.date} required />
+      </AdminField>
+
+      <AdminField label="Time" name="time" required hint='Free text, e.g. "11:00 AM – 1:30 PM".'>
+        <input id="time" name="time" class="field" value={form.time} required />
+      </AdminField>
+    </div>
+
+    <AdminField
+      label="Workshop"
+      name="workshop"
+      required
+      hint="Match an existing workshop title exactly and the enquiry form fills itself in when someone picks this date."
+    >
+      <input id="workshop" name="workshop" class="field" value={form.workshop} list="workshop-titles" required />
+      <datalist id="workshop-titles">
+        {workshopTitles.map((t) => <option value={t}></option>)}
+      </datalist>
+    </AdminField>
+
+    <div class="grid gap-6 sm:grid-cols-3">
+      <AdminField label="Total seats" name="seatsTotal" required hint="Capacity for this session.">
+        <input id="seatsTotal" name="seatsTotal" type="number" min="1" step="1" class="field" value={form.seatsTotal} required />
+      </AdminField>
+
+      <AdminField label="Seats left" name="seatsLeft" required hint="Set to 0 to show it as Full.">
+        <input id="seatsLeft" name="seatsLeft" type="number" min="0" step="1" class="field" value={form.seatsLeft} required />
+      </AdminField>
+
+      <AdminField label="Price" name="priceFrom" hint="Per person. Blank uses the workshop's own price.">
+        <input id="priceFrom" name="priceFrom" type="number" min="1" step="1" class="field" value={form.priceFrom} />
+      </AdminField>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3 border-t border-line pt-6">
+      <button type="submit" class="btn btn-primary">{isNew ? 'Add date' : 'Save changes'}</button>
+      <a href="/admin/dates/" class="btn btn-ghost">Cancel</a>
+    </div>
+  </form>
+
+  {
+    !isNew && (
+      <form
+        method="POST"
+        class="mt-10 max-w-2xl rounded-card border border-error/30 bg-error/5 p-5"
+        onsubmit="return confirm('Remove this session?')"
+      >
+        <input type="hidden" name="intent" value="delete" />
+        <h2 class="font-display text-[1.05rem] font-bold">Remove this session</h2>
+        <p class="mt-1.5 max-w-prose text-body-sm text-ink-soft">
+          Past sessions come off the website on their own, so you only need this if a
+          session was cancelled or entered by mistake.
+        </p>
+        <button
+          type="submit"
+          class="btn mt-4 !min-h-[2.75rem] !border-error !bg-transparent !px-4 text-body-sm !text-error hover:!bg-error hover:!text-white"
+        >
+          Remove
+        </button>
+      </form>
+    )
+  }
+</AdminLayout>

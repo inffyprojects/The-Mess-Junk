@@ -11,7 +11,7 @@
  * pre-filled with that category, plus the add-on and inclusion clarifiers
  * inline rather than as a dense table.
  */
-import { getCollection } from 'astro:content';
+import { getPricingTiers } from '../lib/db';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PageHero from '../components/PageHero.astro';
 import CtaBand from '../components/CtaBand.astro';
@@ -22,7 +22,7 @@ import Grain from '../components/motifs/Grain.astro';
 import Sparkle from '../components/motifs/Sparkle.astro';
 import { whatsappLink } from '../data/site';
 
-const tiers = (await getCollection('pricing')).sort((a, b) => a.data.order - b.data.order);
+const tiers = await getPricingTiers();
 
 /* Add-ons from questionnaire Q23 */
 const addons: { icon: IconName; title: string; body: string }[] = [
@@ -81,7 +81,7 @@ const clarifiers = [
       <ul class="grid gap-6 lg:grid-cols-3">
         {
           tiers.map((tier, i) => {
-            const t = tier.data;
+            const t = tier;
             return (
               <li class="reveal flex" style={`--reveal-delay:${i * 70}ms`}>
                 <div

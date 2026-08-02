@@ -15,7 +15,7 @@
  *     it on.
  * The order below still degrades gracefully with both absent.
  */
-import { getCollection } from 'astro:content';
+import { getWorkshops } from '../lib/db';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SectionHeading from '../components/SectionHeading.astro';
 import ShotPanel from '../components/ShotPanel.astro';
@@ -82,10 +82,9 @@ const founders = [
   { name: 'Khadija Sulaimani', role: 'Co-founder & Creative Director', shot: 'founder-khadija' as ShotId, bio: 'Designs what happens at the table, from the first demo to what you walk out holding.' },
 ];
 
-const workshops = (await getCollection('workshops', ({ data }) => !data.draft)).sort(
-  (a, b) => a.data.order - b.data.order,
-);
-const cheapest = Math.min(...workshops.map((w) => w.data.priceFrom));
+/* Read at build time — this page is prerendered, so visitors never touch Neon. */
+const workshops = await getWorkshops();
+const cheapest = workshops.length ? Math.min(...workshops.map((w) => w.priceFrom)) : 0;
 ---
 
 <BaseLayout

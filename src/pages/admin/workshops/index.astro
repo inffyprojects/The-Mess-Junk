@@ -1,0 +1,118 @@
+---
+/**
+ * Workshops list.
+ *
+ * Shows drafts alongside live entries — hiding them would make a hidden
+ * workshop feel deleted, which is the opposite of why `draft` exists.
+ */
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import Icon from '../../../components/Icon.astro';
+import { requireSession, friendlyDbError } from '../../../lib/admin';
+import { getAllWorkshops, CATEGORY_LABELS } from '../../../lib/db';
+import { formatPrice } from '../../../data/site';
+
+const denied = await requireSession(Astro);
+if (denied) return denied;
+
+let workshops: Awaited<ReturnType<typeof getAllWorkshops>> = [];
+let error = '';
+
+try {
+  workshops = await getAllWorkshops();
+} catch (err) {
+  error = friendlyDbError(err);
+}
+
+const saved = Astro.url.searchParams.get('saved');
+const deleted = Astro.url.searchParams.get('deleted');
+---
+
+<AdminLayout title="Workshops">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="text-display-md">Workshops</h1>
+      <p class="mt-2 text-body-md text-ink-soft">
+        {workshops.length} in total. Lower sort numbers appear first on the site.
+      </p>
+    </div>
+    <a href="/admin/workshops/new/" class="btn btn-primary">
+      <Icon name="plus" size={18} />
+      Add a workshop
+    </a>
+  </div>
+
+  {
+    (saved || deleted) && (
+      <p
+        role="status"
+        class="mt-6 rounded-card-sm border border-success/40 bg-success/5 px-4 py-3 text-body-sm text-success"
+      >
+        {deleted ? 'Workshop deleted.' : 'Saved.'} The website will show the change in about a minute.
+      </p>
+    )
+  }
+
+  {
+    error && (
+      <p
+        role="alert"
+        class="mt-6 rounded-card-sm border border-error/40 bg-error/5 px-4 py-3 text-body-sm text-error"
+      >
+        {error}
+      </p>
+    )
+  }
+
+  {
+    !error && workshops.length === 0 && (
+      <div class="mt-8 rounded-card border border-line bg-white p-10 text-center">
+        <h2 class="font-display text-[1.15rem] font-bold">No workshops yet</h2>
+        <p class="mx-auto mt-2 max-w-prose text-body-sm text-ink-soft">
+          The Workshops page will be empty until you add one.
+        </p>
+        <a href="/admin/workshops/new/" class="btn btn-primary mt-5">Add the first one</a>
+      </div>
+    )
+  }
+
+  {
+    workshops.length > 0 && (
+      <ul class="mt-8 divide-y divide-line overflow-hidden rounded-card border border-line bg-white">
+        {workshops.map((w) => (
+          <li>
+            <a
+              href={`/admin/workshops/${w.id}/`}
+              class="group flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4 transition-colors hover:bg-cobalt-05"
+            >
+              <span class="w-10 shrink-0 text-body-sm tabular-nums text-ink-soft">{w.order}</span>
+
+              <span class="min-w-0 flex-1">
+                <span class="flex flex-wrap items-center gap-2">
+                  <span class="font-semibold">{w.title}</span>
+                  {w.draft && <span class="chip !bg-cobalt-10 !text-ink-soft">Hidden</span>}
+                </span>
+                <span class="mt-0.5 block truncate text-body-sm text-ink-soft">{w.summary}</span>
+              </span>
+
+              <span class="hidden text-body-sm text-ink-soft lg:block">
+                {w.categories.map((c) => CATEGORY_LABELS[c] ?? c).join(', ')}
+              </span>
+
+              <span class="w-24 shrink-0 text-right text-body-sm font-semibold text-cobalt">
+                {formatPrice(w.priceFrom)}
+              </span>
+
+              <Icon
+                name="chevron-right"
+                size={18}
+                class="shrink-0 text-ink-soft transition-transform group-hover:translate-x-0.5 group-hover:text-cobalt"
+              />
+            </a>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</AdminLayout>

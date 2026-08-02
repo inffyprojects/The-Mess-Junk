@@ -1,0 +1,140 @@
+---
+/**
+ * Upcoming dates list — the availability checker's source.
+ *
+ * This is the screen the studio will open most often, because seats change
+ * with every booking. Past sessions are shown greyed rather than hidden, so it
+ * is obvious the schedule is running out rather than mysteriously empty.
+ */
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import Icon from '../../../components/Icon.astro';
+import { requireSession, friendlyDbError } from '../../../lib/admin';
+import { getAllDates } from '../../../lib/db';
+import { formatDate, formatPrice } from '../../../data/site';
+
+const denied = await requireSession(Astro);
+if (denied) return denied;
+
+let dates: Awaited<ReturnType<typeof getAllDates>> = [];
+let error = '';
+
+try {
+  dates = await getAllDates();
+} catch (err) {
+  error = friendlyDbError(err);
+}
+
+const today = new Date().toISOString().slice(0, 10);
+const upcoming = dates.filter((d) => d.date >= today);
+const past = dates.filter((d) => d.date < today);
+
+const saved = Astro.url.searchParams.get('saved');
+const deleted = Astro.url.searchParams.get('deleted');
+---
+
+<AdminLayout title="Upcoming dates">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="text-display-md">Upcoming dates</h1>
+      <p class="mt-2 max-w-prose text-body-md text-ink-soft">
+        These fill the "Check a date" picker on the Contact page. Past dates drop
+        off the website automatically.
+      </p>
+    </div>
+    <a href="/admin/dates/new/" class="btn btn-primary">
+      <Icon name="plus" size={18} />
+      Add a date
+    </a>
+  </div>
+
+  {
+    (saved || deleted) && (
+      <p role="status" class="mt-6 rounded-card-sm border border-success/40 bg-success/5 px-4 py-3 text-body-sm text-success">
+        {deleted ? 'Date removed.' : 'Saved.'} The website will show the change in about a minute.
+      </p>
+    )
+  }
+
+  {
+    error && (
+      <p role="alert" class="mt-6 rounded-card-sm border border-error/40 bg-error/5 px-4 py-3 text-body-sm text-error">
+        {error}
+      </p>
+    )
+  }
+
+  {
+    !error && upcoming.length === 0 && (
+      <div class="mt-8 rounded-card border border-line bg-white p-10 text-center">
+        <h2 class="font-display text-[1.15rem] font-bold">Nothing scheduled</h2>
+        <p class="mx-auto mt-2 max-w-prose text-body-sm text-ink-soft">
+          The Contact page is showing its "next dates are being set" message. Add a
+          session so people can book.
+        </p>
+        <a href="/admin/dates/new/" class="btn btn-primary mt-5">Add a date</a>
+      </div>
+    )
+  }
+
+  {
+    upcoming.length > 0 && (
+      <ul class="mt-8 divide-y divide-line overflow-hidden rounded-card border border-line bg-white">
+        {upcoming.map((d) => {
+          const soldOut = d.seatsLeft === 0;
+          const low = !soldOut && Math.max(2, Math.ceil(d.seatsTotal * 0.25)) >= d.seatsLeft;
+          return (
+            <li>
+              <a
+                href={`/admin/dates/${d.id}/`}
+                class="group flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-4 transition-colors hover:bg-cobalt-05"
+              >
+                <span class="w-32 shrink-0 font-semibold text-cobalt">{formatDate(d.date)}</span>
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate font-medium">{d.workshop}</span>
+                  <span class="block text-body-sm text-ink-soft">{d.time}</span>
+                </span>
+                {d.priceFrom && (
+                  <span class="hidden text-body-sm text-ink-soft sm:block">
+                    {formatPrice(d.priceFrom)}
+                  </span>
+                )}
+                <span class="w-28 shrink-0 text-right">
+                  {soldOut ? (
+                    <span class="chip !bg-cobalt-10 !text-ink-soft">Full</span>
+                  ) : low ? (
+                    <span class="chip chip-yellow">{d.seatsLeft} left</span>
+                  ) : (
+                    <span class="chip">{d.seatsLeft} of {d.seatsTotal}</span>
+                  )}
+                </span>
+                <Icon name="chevron-right" size={18} class="shrink-0 text-ink-soft group-hover:text-cobalt" />
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    )
+  }
+
+  {
+    past.length > 0 && (
+      <details class="mt-8">
+        <summary class="cursor-pointer text-body-sm font-medium text-ink-soft hover:text-cobalt">
+          {past.length} past session{past.length === 1 ? '' : 's'} — no longer on the website
+        </summary>
+        <ul class="mt-3 divide-y divide-line overflow-hidden rounded-card border border-line bg-white opacity-70">
+          {past.map((d) => (
+            <li>
+              <a href={`/admin/dates/${d.id}/`} class="flex items-center gap-4 px-5 py-3 hover:bg-cobalt-05">
+                <span class="w-32 shrink-0 text-body-sm text-ink-soft">{formatDate(d.date)}</span>
+                <span class="min-w-0 flex-1 truncate text-body-sm">{d.workshop}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </details>
+    )
+  }
+</AdminLayout>

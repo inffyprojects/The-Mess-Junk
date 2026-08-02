@@ -93,14 +93,14 @@ between the founders section and the final CTA.
 same Resend path as the enquiry form, and you add them to a list by hand. For a
 pre-launch studio expecting a handful of signups a month this is the right size
 and costs nothing. When it outgrows that, set `BUTTONDOWN_API_KEY` in the
-Cloudflare dashboard and signups switch to Buttondown automatically — no code
-change, no front-end change. (`functions/api/newsletter.ts`.)
+Vercel dashboard and signups switch to Buttondown automatically — no code
+change, no front-end change. (`src/pages/api/newsletter.ts`.)
 
 **Contact form delivery path: Resend.** As specified. The function also has a
 Google Sheet webhook fallback (`SHEET_WEBHOOK_URL`) which is used automatically
 if Resend is missing or erroring, so an enquiry is never silently dropped while
 you are still setting Resend up. **Neither is configured yet** — until
-`RESEND_API_KEY` is set in Cloudflare, the form fails gracefully and hands the
+`RESEND_API_KEY` is set in Vercel, the form fails gracefully and hands the
 visitor a pre-filled WhatsApp link containing everything they typed. Setup steps
 are in the README.
 
@@ -120,29 +120,34 @@ placeholders for a real schedule.
 
 ---
 
-## 3b. Hosting: works on Cloudflare Pages *or* Vercel
+## 3b. Hosting and architecture: Vercel + Neon
 
-The brief specified Cloudflare Pages, and that is still the cheapest option.
-The site has since also been deployed to Vercel, so both are now wired up.
+The site was originally built for Cloudflare Pages with content as Markdown and
+JSON files. It has since moved twice, both at the client's direction:
 
-The catch worth knowing: **`functions/` is a Cloudflare-only convention and
-does nothing on Vercel** — Vercel reads functions from a top-level `api/`
-directory instead. Deployed to Vercel without that, the enquiry form would have
-posted to `/api/contact` and got a 404 (the visitor would still have been
-offered the WhatsApp fallback, but no email would ever arrive).
+1. Deployed to **Vercel** instead of Cloudflare Pages.
+2. Content moved out of files into a **Neon Postgres** database, with a custom
+   admin panel at `/admin`, replacing the Decap CMS attempt.
 
-Both adapters now exist and share one implementation:
+Cloudflare support has been removed rather than left half-working — the
+`functions/` directory, `wrangler.toml` and the wrangler dependency are gone,
+because with the Vercel adapter configured a Cloudflare deploy could not have
+worked anyway.
 
-```
-lib/enquiry.ts          all validation + delivery logic — the real code
-functions/api/*.ts      Cloudflare Pages adapter  (ignored by Vercel)
-api/*.ts                Vercel adapter            (ignored by Cloudflare)
-```
+**One thing worth recording, because it is not obvious.** Adding
+`@astrojs/vercel` switches the build to Vercel's Build Output API
+(`.vercel/output/`). Vercel then serves *only* what that output declares, and
+**ignores the legacy top-level `/api` directory**. The enquiry form and
+newsletter originally lived in `/api/*.ts` and were silently falling through to
+the catch-all 404 — a broken form looks identical to a form nobody submitted, so
+this would not have shown up until someone complained about missing enquiries.
+They now live at `src/pages/api/*.ts`, which the adapter compiles and routes
+properly. If an endpoint ever needs adding, put it there, not in a root `/api`.
 
-Each adapter is about twenty lines whose only job is to translate that
-platform's request/response and env-var conventions. Pick either host; the
-front-end calls the same `/api/contact` URL either way, and `RESEND_API_KEY`
-goes in that host's dashboard.
+Rendering is hybrid: public pages prerender from Neon at build time and ship as
+static HTML; `/admin/*` sets `prerender = false` and is server-rendered. Saving
+in the admin pings a Vercel Deploy Hook to rebuild the public pages, so an edit
+is live in about a minute. Visitors never touch the database.
 
 ---
 

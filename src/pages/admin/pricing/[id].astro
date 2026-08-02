@@ -1,0 +1,217 @@
+---
+/**
+ * Create or edit a pricing tier.
+ *
+ * `includes` is a list in the database but a textarea here — one item per line
+ * is a far easier mental model than a repeatable field widget, and it maps
+ * cleanly both ways.
+ */
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import AdminField from '../../../components/admin/AdminField.astro';
+import Icon from '../../../components/Icon.astro';
+import { requireSession, str, int, bool, lines, slugify, friendlyDbError } from '../../../lib/admin';
+import {
+  getPricingTier,
+  createPricingTier,
+  updatePricingTier,
+  deletePricingTier,
+  type PricingTier,
+} from '../../../lib/db';
+import { triggerRebuild } from '../../../lib/deploy';
+
+const denied = await requireSession(Astro);
+if (denied) return denied;
+
+const idParam = Astro.params.id!;
+const isNew = idParam === 'new';
+const id = isNew ? null : Number(idParam);
+
+if (!isNew && !Number.isInteger(id)) return Astro.redirect('/admin/pricing/', 302);
+
+let error = '';
+let record: PricingTier | null = null;
+
+let form = {
+  name: '',
+  price: '',
+  priceNote: '',
+  summary: '',
+  includes: '',
+  enquiryType: '',
+  featured: false,
+  order: '50',
+};
+
+if (!isNew) {
+  record = await getPricingTier(id!);
+  if (!record) return Astro.redirect('/admin/pricing/', 302);
+  form = {
+    name: record.name,
+    price: record.price,
+    priceNote: record.priceNote ?? '',
+    summary: record.summary,
+    includes: record.includes.join('\n'),
+    enquiryType: record.enquiryType,
+    featured: record.featured,
+    order: String(record.order),
+  };
+}
+
+if (Astro.request.method === 'POST') {
+  const data = await Astro.request.formData();
+
+  if (str(data, 'intent') === 'delete' && !isNew) {
+    try {
+      await deletePricingTier(id!);
+      await triggerRebuild();
+      return Astro.redirect('/admin/pricing/?deleted=1', 302);
+    } catch (err) {
+      error = friendlyDbError(err);
+    }
+  } else {
+    form = {
+      name: str(data, 'name'),
+      price: str(data, 'price'),
+      priceNote: str(data, 'priceNote'),
+      summary: str(data, 'summary'),
+      includes: str(data, 'includes'),
+      enquiryType: str(data, 'enquiryType'),
+      featured: bool(data, 'featured'),
+      order: str(data, 'order'),
+    };
+
+    const includes = lines(data, 'includes');
+
+    if (!form.name) error = 'Give the tier a name.';
+    else if (!form.price) error = 'Add the price text.';
+    else if (!form.summary) error = 'Add a short summary.';
+    else if (includes.length === 0) error = 'Add at least one line to "What is included".';
+
+    if (!error) {
+      const payload = {
+        slug: record?.slug ?? slugify(form.name),
+        name: form.name,
+        price: form.price,
+        priceNote: form.priceNote || null,
+        summary: form.summary,
+        includes,
+        enquiryType: form.enquiryType || form.name,
+        featured: form.featured,
+        order: int(data, 'order') ?? 50,
+      };
+      try {
+        if (isNew) await createPricingTier(payload);
+        else await updatePricingTier(id!, payload);
+        await triggerRebuild();
+        return Astro.redirect('/admin/pricing/?saved=1', 302);
+      } catch (err) {
+        error = friendlyDbError(err);
+      }
+    }
+  }
+}
+---
+
+<AdminLayout title={isNew ? 'New tier' : 'Edit tier'}>
+  <a href="/admin/pricing/" class="inline-flex items-center gap-1.5 text-body-sm text-ink-soft hover:text-cobalt">
+    <Icon name="chevron-right" size={15} class="rotate-180" />
+    All tiers
+  </a>
+
+  <h1 class="mt-3 text-display-md">{isNew ? 'Add a pricing tier' : 'Edit pricing tier'}</h1>
+
+  {
+    error && (
+      <p role="alert" class="mt-6 rounded-card-sm border border-error/40 bg-error/5 px-4 py-3 text-body-sm text-error">
+        {error}
+      </p>
+    )
+  }
+
+  <form method="POST" class="mt-8 max-w-2xl space-y-6">
+    <AdminField label="Tier name" name="name" required hint='The heading, e.g. "Public Workshops".'>
+      <input id="name" name="name" class="field" value={form.name} required />
+    </AdminField>
+
+    <div class="grid gap-6 sm:grid-cols-2">
+      <AdminField
+        label="Price text"
+        name="price"
+        required
+        hint='Free text — "₹499 – ₹2,500", "Custom", "Let&apos;s talk".'
+      >
+        <input id="price" name="price" class="field" value={form.price} required />
+      </AdminField>
+
+      <AdminField label="Price note" name="priceNote" hint='Small line under the price, e.g. "per person".'>
+        <input id="priceNote" name="priceNote" class="field" value={form.priceNote} />
+      </AdminField>
+    </div>
+
+    <AdminField label="Summary" name="summary" required hint="One or two sentences under the price.">
+      <textarea id="summary" name="summary" rows="3" class="field resize-y" required>{form.summary}</textarea>
+    </AdminField>
+
+    <AdminField
+      label="What is included"
+      name="includes"
+      required
+      hint="One item per line. Each becomes a bullet on the card."
+    >
+      <textarea id="includes" name="includes" rows="7" class="field resize-y" required>{form.includes}</textarea>
+    </AdminField>
+
+    <div class="grid gap-6 sm:grid-cols-2">
+      <AdminField
+        label="Enquiry type"
+        name="enquiryType"
+        hint="Pre-fills the contact form's Event type. Leave blank to reuse the tier name."
+      >
+        <input id="enquiryType" name="enquiryType" class="field" value={form.enquiryType} />
+      </AdminField>
+
+      <AdminField label="Sort order" name="order" hint="Lower numbers appear first.">
+        <input id="order" name="order" type="number" step="1" class="field" value={form.order} />
+      </AdminField>
+    </div>
+
+    <label class="flex cursor-pointer items-start gap-3 rounded-card-sm border border-line bg-white p-4">
+      <input type="checkbox" name="featured" checked={form.featured} class="mt-1 h-4 w-4 accent-cobalt" />
+      <span>
+        <span class="block font-semibold">Highlight this tier</span>
+        <span class="mt-0.5 block text-body-sm text-ink-soft">
+          Adds the "Most people start here" badge. Use it on one tier only.
+        </span>
+      </span>
+    </label>
+
+    <div class="flex flex-wrap items-center gap-3 border-t border-line pt-6">
+      <button type="submit" class="btn btn-primary">{isNew ? 'Create tier' : 'Save changes'}</button>
+      <a href="/admin/pricing/" class="btn btn-ghost">Cancel</a>
+    </div>
+  </form>
+
+  {
+    !isNew && (
+      <form
+        method="POST"
+        class="mt-10 max-w-2xl rounded-card border border-error/30 bg-error/5 p-5"
+        onsubmit="return confirm('Delete this pricing tier?')"
+      >
+        <input type="hidden" name="intent" value="delete" />
+        <h2 class="font-display text-[1.05rem] font-bold">Delete this tier</h2>
+        <p class="mt-1.5 max-w-prose text-body-sm text-ink-soft">
+          It disappears from the Pricing page on the next rebuild.
+        </p>
+        <button
+          type="submit"
+          class="btn mt-4 !min-h-[2.75rem] !border-error !bg-transparent !px-4 text-body-sm !text-error hover:!bg-error hover:!text-white"
+        >
+          Delete
+        </button>
+      </form>
+    )
+  }
+</AdminLayout>

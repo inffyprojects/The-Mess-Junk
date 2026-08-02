@@ -1,0 +1,106 @@
+---
+/**
+ * Pricing tiers list.
+ *
+ * Only ever three or four rows, so this stays a simple ordered list rather than
+ * a table with sorting and filtering it would never use.
+ */
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import Icon from '../../../components/Icon.astro';
+import { requireSession, friendlyDbError } from '../../../lib/admin';
+import { getPricingTiers } from '../../../lib/db';
+
+const denied = await requireSession(Astro);
+if (denied) return denied;
+
+let tiers: Awaited<ReturnType<typeof getPricingTiers>> = [];
+let error = '';
+
+try {
+  tiers = await getPricingTiers();
+} catch (err) {
+  error = friendlyDbError(err);
+}
+
+const featuredCount = tiers.filter((t) => t.featured).length;
+const saved = Astro.url.searchParams.get('saved');
+const deleted = Astro.url.searchParams.get('deleted');
+---
+
+<AdminLayout title="Pricing">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="text-display-md">Pricing</h1>
+      <p class="mt-2 max-w-prose text-body-md text-ink-soft">
+        The cards on the Pricing page. Each one links to the enquiry form.
+      </p>
+    </div>
+    <a href="/admin/pricing/new/" class="btn btn-primary">
+      <Icon name="plus" size={18} />
+      Add a tier
+    </a>
+  </div>
+
+  {
+    (saved || deleted) && (
+      <p role="status" class="mt-6 rounded-card-sm border border-success/40 bg-success/5 px-4 py-3 text-body-sm text-success">
+        {deleted ? 'Tier deleted.' : 'Saved.'} The website will show the change in about a minute.
+      </p>
+    )
+  }
+
+  {
+    error && (
+      <p role="alert" class="mt-6 rounded-card-sm border border-error/40 bg-error/5 px-4 py-3 text-body-sm text-error">
+        {error}
+      </p>
+    )
+  }
+
+  {
+    featuredCount > 1 && (
+      <p class="mt-6 rounded-card-sm border border-acid-yellow bg-acid-yellow/20 px-4 py-3 text-body-sm text-ink">
+        {featuredCount} tiers are marked as featured. Only one should be — the
+        highlight loses its meaning otherwise.
+      </p>
+    )
+  }
+
+  {
+    !error && tiers.length === 0 && (
+      <div class="mt-8 rounded-card border border-line bg-white p-10 text-center">
+        <h2 class="font-display text-[1.15rem] font-bold">No pricing tiers</h2>
+        <p class="mx-auto mt-2 max-w-prose text-body-sm text-ink-soft">
+          The Pricing page will have nothing to show.
+        </p>
+        <a href="/admin/pricing/new/" class="btn btn-primary mt-5">Add one</a>
+      </div>
+    )
+  }
+
+  {
+    tiers.length > 0 && (
+      <ul class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {tiers.map((t) => (
+          <li class="flex">
+            <a href={`/admin/pricing/${t.id}/`} class="card card-interactive flex w-full flex-col p-6">
+              <span class="flex items-start justify-between gap-3">
+                <span class="font-display text-[1.15rem] font-bold tracking-tight">{t.name}</span>
+                {t.featured && <span class="chip chip-yellow shrink-0">Featured</span>}
+              </span>
+              <span class="mt-3 block font-display text-[1.5rem] font-bold text-cobalt">{t.price}</span>
+              {t.priceNote && <span class="mt-1 block text-body-sm text-ink-soft">{t.priceNote}</span>}
+              <span class="mt-4 block flex-1 text-body-sm text-ink-soft">{t.summary}</span>
+              <span class="mt-4 flex items-center gap-1.5 border-t border-line pt-4 text-body-sm font-medium text-cobalt">
+                Edit
+                <Icon name="arrow-right" size={15} />
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</AdminLayout>

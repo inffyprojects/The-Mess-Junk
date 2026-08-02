@@ -10,8 +10,7 @@
  * and its content is in the HTML for search engines. The only scripted
  * behaviour is the plus-to-cross icon rotation, which is pure CSS.
  */
-import { getCollection } from 'astro:content';
-import { render } from 'astro:content';
+import { getFaq } from '../lib/db';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PageHero from '../components/PageHero.astro';
 import CtaBand from '../components/CtaBand.astro';
@@ -25,17 +24,12 @@ const GROUPS = [
   { id: 'expect', label: 'What to expect', blurb: 'On the day — what to wear, how long, what you take home.' },
 ] as const;
 
-const all = (await getCollection('faq')).sort((a, b) => a.data.order - b.data.order);
-
-/* Render each answer's Markdown body once, up front, so the template below
-   stays declarative. */
-const rendered = await Promise.all(
-  all.map(async (entry) => ({ entry, Content: (await render(entry)).Content })),
-);
+/* Read at build time — this page is prerendered. */
+const all = await getFaq();
 
 const byGroup = GROUPS.map((g) => ({
   ...g,
-  items: rendered.filter((r) => r.entry.data.group === g.id),
+  items: all.filter((f) => f.group === g.id),
 }));
 
 /* FAQPage structured data. With no blog to carry organic search (§11 open
@@ -46,8 +40,8 @@ const faqSchema = {
   '@type': 'FAQPage',
   mainEntity: all.map((f) => ({
     '@type': 'Question',
-    name: f.data.question,
-    acceptedAnswer: { '@type': 'Answer', text: f.body?.trim() ?? '' },
+    name: f.question,
+    acceptedAnswer: { '@type': 'Answer', text: f.answer },
   })),
 };
 ---
@@ -121,7 +115,7 @@ const faqSchema = {
                 </div>
 
                 <div class="mt-6 divide-y divide-line border-y border-line">
-                  {g.items.map(({ entry, Content }, i) => (
+                  {g.items.map((entry, i) => (
                     <details class="accordion-item group" style={`--reveal-delay:${Math.min(i, 6) * 60}ms`}>
                       <summary
                         class:list={[
@@ -130,16 +124,14 @@ const faqSchema = {
                           'transition-colors duration-200 ease-brand hover:text-cobalt',
                         ]}
                       >
-                        {entry.data.question}
+                        {entry.question}
                         <Icon
                           name="plus"
                           size={20}
                           class="accordion-icon mt-0.5 shrink-0 text-cobalt transition-transform duration-300 ease-brand"
                         />
                       </summary>
-                      <div class="max-w-prose pb-6 text-body-md text-ink-soft [&_a]:text-cobalt [&_a]:underline [&_a]:underline-offset-4">
-                        <Content />
-                      </div>
+                      <p class="max-w-prose pb-6 text-body-md text-ink-soft">{entry.answer}</p>
                     </details>
                   ))}
                 </div>
