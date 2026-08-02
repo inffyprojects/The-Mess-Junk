@@ -35,6 +35,13 @@ change is live in about a minute.
 
 Requires **Node 20 or newer** and a `DATABASE_URL` (see [SETUP.md](SETUP.md)).
 
+> **Node version matters for deploys.** `package.json` pins
+> `engines.node` to `22.x`. The Vercel adapter reads the *build machine's*
+> `process.version` to decide the serverless runtime, so without that pin Vercel
+> built on Node 18 and emitted `nodejs18.x` — a runtime Vercel no longer accepts,
+> which fails the deploy outright. Do not remove the pin, and keep it on a
+> version Vercel still supports.
+
 ```bash
 npm install
 cp .env.example .env     # then fill in at least DATABASE_URL

@@ -109,6 +109,11 @@ these to **Production** (and Preview if you want previews to work too):
 Then **redeploy** — environment variables are read at build and request time,
 and a redeploy is the reliable way to be sure they have taken.
 
+While you are in Settings, check **General → Node.js Version** is **22.x**.
+`package.json` pins `engines.node` to `22.x` and that normally wins, but an
+older value here is what caused the first deploy to fail with
+*"invalid runtime: _render (nodejs18.x)"*.
+
 ---
 
 ## 7. Check it works
