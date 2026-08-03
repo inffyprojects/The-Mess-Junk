@@ -234,7 +234,7 @@ you need so there is room to crop.
 **Portrait, 4:5 — natural light, in the studio, mid-task. Not a headshot backdrop.**
 | Slot | Who |
 |---|---|
-| `founder-aditi` | Aditi Musalgaonkar |
+| `founder-aditi` | Gini |
 | `founder-abhinav` | Abhinav Singh Rajput |
 | `founder-khadija` | Khadija Sulaimani |
 

@@ -21,6 +21,7 @@ import Icon from '../components/Icon.astro';
 import Blob from '../components/motifs/Blob.astro';
 import Grain from '../components/motifs/Grain.astro';
 import Sparkle from '../components/motifs/Sparkle.astro';
+import PaymentQR from '../components/PaymentQR.astro';
 import { site, whatsappLink, formatDate, formatPrice } from '../data/site';
 
 const workshops = await getWorkshops();
@@ -385,6 +386,19 @@ const mapSrc =
             We send exact directions along with your booking confirmation.
           </p>
         </aside>
+      </div>
+    </div>
+  </section>
+  <!-- ===================================================================
+       PAYMENT
+       Placed after the enquiry, not before it: the amount is agreed on
+       WhatsApp first, so showing a QR earlier would imply a checkout the
+       business does not run (Q24, design doc §6.3).
+       =================================================================== -->
+  <section class="section-tight" id="pay">
+    <div class="shell">
+      <div class="reveal">
+        <PaymentQR note="The Mess Junk workshop booking" />
       </div>
     </div>
   </section>

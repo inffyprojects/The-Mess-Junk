@@ -78,7 +78,7 @@ export const SHOTS = {
     ratio: '4/5',
     brief:
       'Portrait, 4:5, natural light, in the studio and mid-task — not a headshot backdrop. Hands doing something.',
-    alt: 'Gini Musalgaonkar, Founder and Creative Director, at work in the Mess Junk studio.',
+    alt: 'Gini, Founder and Creative Director, at work in the Mess Junk studio.',
   },
   'founder-abhinav': {
     id: 'founder-abhinav',

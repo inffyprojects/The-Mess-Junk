@@ -20,6 +20,7 @@ import type { IconName } from '../data/icons';
 import Blob from '../components/motifs/Blob.astro';
 import Grain from '../components/motifs/Grain.astro';
 import Sparkle from '../components/motifs/Sparkle.astro';
+import PaymentQR from '../components/PaymentQR.astro';
 import { whatsappLink } from '../data/site';
 
 const tiers = await getPricingTiers();
@@ -218,6 +219,15 @@ const clarifiers = [
             same craft, the same materials and the same artists, just a shared table.
           </span>
         </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How to actually pay, once a quote is agreed -->
+  <section class="section-tight">
+    <div class="shell">
+      <div class="reveal">
+        <PaymentQR note="The Mess Junk workshop booking" />
       </div>
     </div>
   </section>

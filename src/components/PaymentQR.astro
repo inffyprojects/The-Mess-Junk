@@ -1,0 +1,98 @@
+---
+/**
+ * UPI payment panel.
+ *
+ * The QR is GENERATED at build time from the UPI deep link rather than being a
+ * screenshot of someone's Google Pay page. That matters for three reasons: it
+ * stays sharp at any size, it is a few hundred bytes of inline SVG instead of a
+ * bitmap request, and it carries no third-party branding onto the site.
+ *
+ * Deliberately not a checkout. There is no amount encoded, no order, and
+ * nothing is captured here — the figure is agreed on WhatsApp first and typed
+ * in by the payer. That keeps it consistent with the client's "request a custom
+ * quote" answer (Q24) and the design document's rule that the CTA is never a
+ * fixed checkout (§6.3). See BUILD_NOTES.
+ *
+ * The same link is also rendered as a tappable anchor, because on a phone
+ * `upi://` opens the payment app directly and scanning your own screen is
+ * impossible.
+ */
+import QRCode from 'qrcode';
+import Icon from './Icon.astro';
+import Grain from './motifs/Grain.astro';
+import Blob from './motifs/Blob.astro';
+import { site, upiLink } from '../data/site';
+
+interface Props {
+  /** Appears as the payment note in the payer's UPI app */
+  note?: string;
+  class?: string;
+}
+
+const { note = 'The Mess Junk workshop', class: className = '' } = Astro.props;
+
+const link = upiLink(note);
+
+/*
+  Error correction level M: enough redundancy to survive a phone screenshot or a
+  printed copy taped to the studio wall, without inflating the module count so
+  far that the code stops scanning at small sizes.
+
+  `margin: 0` because the surrounding white card already provides the quiet
+  zone the spec requires.
+*/
+const qrSvg = await QRCode.toString(link, {
+  type: 'svg',
+  margin: 0,
+  errorCorrectionLevel: 'M',
+  color: { dark: '#17173A', light: '#0000' },
+});
+---
+
+<section
+  class:list={['relative overflow-hidden rounded-card border border-line bg-white p-7 md:p-8', className]}
+>
+  <Blob variant={2} color="var(--cobalt)" opacity={0.07} class="absolute -right-[14%] -top-[38%] w-[52%]" />
+  <Grain opacity={0.16} />
+
+  <div class="relative z-[2] grid gap-7 sm:grid-cols-[auto_1fr] sm:items-start">
+    <!-- The code itself -->
+    <div class="mx-auto w-full max-w-[190px] sm:mx-0 sm:w-[190px]">
+      <div class="rounded-card-sm border border-line bg-white p-3.5">
+        <!-- set:html so the generated SVG is inlined rather than fetched -->
+        <div class="[&>svg]:block [&>svg]:h-auto [&>svg]:w-full" set:html={qrSvg} />
+      </div>
+      <p class="mt-3 text-center text-body-sm text-ink-soft sm:text-left">
+        Scan with any UPI app
+      </p>
+    </div>
+
+    <div>
+      <p class="eyebrow">Paying for a booking</p>
+      <h2 class="mt-2.5 font-display text-[1.35rem] font-bold tracking-tight">
+        Pay by UPI
+      </h2>
+      <p class="mt-2.5 max-w-prose text-body-md text-ink-soft">
+        Once we have confirmed your seat and the amount on WhatsApp, scan this
+        code — or tap the button on your phone — and enter the agreed figure.
+      </p>
+
+      <!-- Copyable VPA, for anyone who would rather type it into their bank app -->
+      <div class="mt-5 rounded-card-sm border border-line bg-off-white px-4 py-3">
+        <p class="text-body-sm text-ink-soft">UPI ID</p>
+        <p class="mt-0.5 select-all break-all font-medium text-ink">{site.upi.id}</p>
+        <p class="mt-1 text-body-sm text-ink-soft">{site.upi.payeeName}</p>
+      </div>
+
+      <a href={link} class="btn btn-primary mt-5 w-full sm:w-auto">
+        <Icon name="arrow-up-right" size={18} />
+        Open my UPI app
+      </a>
+
+      <p class="mt-4 max-w-prose text-body-sm text-ink-soft">
+        Please send us a screenshot of the payment on WhatsApp so we can mark
+        your seat as confirmed.
+      </p>
+    </div>
+  </div>
+</section>

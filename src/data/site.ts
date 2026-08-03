@@ -40,7 +40,54 @@ export const site = {
 
   /** Q13 — the client has not fixed opening hours yet */
   hours: 'Workshop timings vary — message us for the current schedule',
+
+  /**
+   * UPI payment details.
+   *
+   * The site shows a QR so someone can pay a confirmed booking from any UPI
+   * app. It is deliberately NOT a checkout: there is no amount baked in, no
+   * order, and nothing is captured on the site. That matches the client's own
+   * answer (Q24 — "request a custom quote") and the design document's rule
+   * that the CTA is never a fixed checkout. The amount is agreed on WhatsApp
+   * first and typed in by the payer.
+   */
+  upi: {
+    /** Virtual Payment Address the money goes to */
+    id: 'abhinavsingh2674@okhdfcbank',
+    /** Name UPI apps display on the confirmation screen */
+    payeeName: 'ABHINAV SINGH',
+  },
 } as const;
+
+/**
+ * Builds the UPI deep link that the QR encodes.
+ *
+ * `am` (amount) is intentionally omitted so the payer enters the agreed figure
+ * — workshop prices vary per session and per group size, and a wrong
+ * pre-filled amount is worse than none. `cu=INR` keeps apps from guessing.
+ *
+ * On a phone this same string works as an `href`, opening the UPI app directly,
+ * which is why the QR panel also renders it as a tap-to-pay link.
+ */
+export function upiLink(note?: string): string {
+  /*
+    Built by hand rather than with URLSearchParams, which serialises a space as
+    `+` (form encoding, not URI encoding). UPI apps read `pn` literally, so a
+    URLSearchParams link shows the payee as "ABHINAV+SINGH" on the confirmation
+    screen. encodeURIComponent gives %20, which every app decodes correctly.
+
+    `pa` is left unencoded: a VPA is only ever alphanumerics, dots, hyphens,
+    underscores and `@`, all legal in a query string, and this is the form real
+    UPI QRs use.
+  */
+  const parts = [
+    `pa=${site.upi.id}`,
+    `pn=${encodeURIComponent(site.upi.payeeName)}`,
+    'cu=INR',
+  ];
+  if (note) parts.push(`tn=${encodeURIComponent(note)}`);
+  return `upi://pay?${parts.join('&')}`;
+}
 
 /**
  * Primary navigation — design doc §5.

@@ -249,9 +249,61 @@ export async function getDate(id: number): Promise<WorkshopDate | null> {
    Writes — admin panel only
    --------------------------------------------------------------------------- */
 
+/**
+ * Finds a free slug, appending -2, -3 … if the base is taken.
+ *
+ * Slugs are an internal identifier the editor never sees or types — they are
+ * derived from the title. Letting a slug collision surface as a database error
+ * meant someone creating a workshop whose title matched an existing one got
+ * "Something with that name already exists", which is both confusing and
+ * unactionable when they cannot see slugs at all. Worse, it fired when a save
+ * had actually SUCCEEDED and the editor simply submitted again, making a
+ * working save look broken.
+ *
+ * The table name cannot be parameterised in SQL, so each table gets its own
+ * query rather than string-concatenating an identifier into the statement.
+ */
+async function uniqueSlug(
+  table: 'workshops' | 'faq' | 'pricing_tiers',
+  base: string,
+  excludeId?: number,
+): Promise<string> {
+  const db = sql();
+  const exclude = excludeId ?? -1;
+
+  const taken =
+    table === 'workshops'
+      ? await db`SELECT slug FROM workshops WHERE slug LIKE ${base + '%'} AND id <> ${exclude}`
+      : table === 'faq'
+        ? await db`SELECT slug FROM faq WHERE slug LIKE ${base + '%'} AND id <> ${exclude}`
+        : await db`SELECT slug FROM pricing_tiers WHERE slug LIKE ${base + '%'} AND id <> ${exclude}`;
+
+  const used = new Set(taken.map((r) => r.slug as string));
+  if (!used.has(base)) return base;
+
+  for (let n = 2; n < 500; n++) {
+    const candidate = `${base}-${n}`;
+    if (!used.has(candidate)) return candidate;
+  }
+
+  // Pathological case only; keeps the insert valid rather than throwing.
+  return `${base}-${Date.now()}`;
+}
+
 export type WorkshopInput = Omit<Workshop, 'id'>;
 
+/** Counts workshops sharing a title, so the admin can warn about a double-save. */
+export async function countWorkshopsWithTitle(title: string, excludeId = -1): Promise<number> {
+  const rows = await sql()`
+    SELECT count(*)::int AS n FROM workshops
+    WHERE lower(title) = lower(${title}) AND id <> ${excludeId}
+  `;
+  return rows[0].n as number;
+}
+
 export async function createWorkshop(w: WorkshopInput): Promise<number> {
+  w = { ...w, slug: await uniqueSlug('workshops', w.slug) };
+
   const rows = await sql()`
     INSERT INTO workshops
       (slug, title, summary, categories, price_from, age_group, duration,
@@ -285,6 +337,7 @@ export async function deleteWorkshop(id: number): Promise<void> {
 export type FaqInput = Omit<FaqEntry, 'id'>;
 
 export async function createFaq(f: FaqInput): Promise<number> {
+  f = { ...f, slug: await uniqueSlug('faq', f.slug) };
   const rows = await sql()`
     INSERT INTO faq (slug, question, faq_group, answer, sort_order)
     VALUES (${f.slug}, ${f.question}, ${f.group}, ${f.answer}, ${f.order})
@@ -309,6 +362,7 @@ export async function deleteFaq(id: number): Promise<void> {
 export type PricingInput = Omit<PricingTier, 'id'>;
 
 export async function createPricingTier(t: PricingInput): Promise<number> {
+  t = { ...t, slug: await uniqueSlug('pricing_tiers', t.slug) };
   const rows = await sql()`
     INSERT INTO pricing_tiers
       (slug, name, price, price_note, summary, includes, enquiry_type, featured, sort_order)

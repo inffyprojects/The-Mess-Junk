@@ -21,6 +21,7 @@ import {
   createWorkshop,
   updateWorkshop,
   deleteWorkshop,
+  countWorkshopsWithTitle,
   CATEGORIES,
   CATEGORY_LABELS,
   type Category,
@@ -112,6 +113,19 @@ if (Astro.request.method === 'POST') {
     else if (form.categories.length === 0) error = 'Pick at least one category.';
     else if (!int(data, 'priceFrom') || int(data, 'priceFrom')! < 1)
       error = 'Enter a starting price above zero, digits only.';
+
+    /* A title that already exists is almost always a double-submit: the first
+       save worked, the editor did not notice, and pressed the button again.
+       Say so plainly and link to the existing entry, rather than letting a slug
+       collision surface as "something with that name already exists". */
+    if (!error && isNew) {
+      const clash = await countWorkshopsWithTitle(form.title);
+      if (clash > 0) {
+        error =
+          `A workshop called "${form.title}" already exists — your earlier save probably ` +
+          `worked. Check the workshops list before adding it again.`;
+      }
+    }
 
     if (!error) {
       const payload = {
